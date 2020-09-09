@@ -9,8 +9,14 @@ test("No other tags", async () => {
         name: "0.0.1",
       },
     ]);
-  const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/0.0.1");
-  expect(tags).toEqual(new Set(["0.0.1", "0.0", "0", "latest"]));
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/0.0.1",
+    ""
+  );
+  expect(tags).toEqual(["0.0.1", "0.0", "0", "latest"]);
 });
 
 test("Is the latest tag", async () => {
@@ -24,8 +30,14 @@ test("Is the latest tag", async () => {
         name: "2.0.0",
       },
     ]);
-  const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/2.0.0");
-  expect(tags).toEqual(new Set(["2.0.0", "2.0", "2", "latest"]));
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/2.0.0",
+    ""
+  );
+  expect(tags).toEqual(["2.0.0", "2.0", "2", "latest"]);
 });
 
 test("Not the latest major tag", async () => {
@@ -42,8 +54,14 @@ test("Not the latest major tag", async () => {
         name: "1.1.0",
       },
     ]);
-  const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/1.1.0");
-  expect(tags).toEqual(new Set(["1.1.0"]));
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0"]);
 });
 
 test("Not the latest minor tag", async () => {
@@ -63,8 +81,14 @@ test("Not the latest minor tag", async () => {
         name: "2.0.1",
       },
     ]);
-  const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/2.0.1");
-  expect(tags).toEqual(new Set(["2.0.1"]));
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/2.0.1",
+    ""
+  );
+  expect(tags).toEqual(["2.0.1"]);
 });
 
 test("Ignore existing pre-releases", async () => {
@@ -81,8 +105,14 @@ test("Ignore existing pre-releases", async () => {
         name: "1.1.0",
       },
     ]);
-  const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/1.1.0");
-  expect(tags).toEqual(new Set(["1.1.0", "1.1", "1", "latest"]));
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0", "1.1", "1", "latest"]);
 });
 
 test("Pre-release tag", async () => {
@@ -98,19 +128,43 @@ test("Pre-release tag", async () => {
     "TOKEN",
     "owner",
     "repo",
-    "refs/tags/2.0.0-rc1"
+    "refs/tags/2.0.0-rc1",
+    ""
   );
-  expect(tags).toEqual(new Set(["2.0.0-rc1"]));
+  expect(tags).toEqual(["2.0.0-rc1"]);
 });
 
 test("Not a tag", async () => {
   await expect(
-    calculateTags("TOKEN", "owner", "repo", "refs/heads/main")
+    calculateTags("TOKEN", "owner", "repo", "refs/heads/main", "")
   ).rejects.toEqual(new Error("Not a tag: refs/heads/main"));
 });
 
 test("Invalid semver tag", async () => {
   await expect(
-    calculateTags("TOKEN", "owner", "repo", "refs/tags/v1")
+    calculateTags("TOKEN", "owner", "repo", "refs/tags/v1", "")
   ).rejects.toEqual(new Error("Invalid semver tag: v1"));
+});
+
+test("Prefix", async () => {
+  nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "0.0.1",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/0.0.1",
+    "prefix:"
+  );
+  expect(tags).toEqual([
+    "prefix:0.0.1",
+    "prefix:0.0",
+    "prefix:0",
+    "prefix:latest",
+  ]);
 });

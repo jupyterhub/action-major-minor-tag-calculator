@@ -7846,7 +7846,7 @@ const github = __webpack_require__(5438);
 const { env } = __webpack_require__(1765);
 const semver = __webpack_require__(1383);
 
-async function calculateTags(token, owner, repo, ref) {
+async function calculateTags(token, owner, repo, ref, prefix) {
   core.debug(`ref: ${ref}`);
   if (!ref.startsWith("refs/tags/")) {
     throw new Error(`Not a tag: ${ref}`);
@@ -7864,7 +7864,7 @@ async function calculateTags(token, owner, repo, ref) {
     repo: repo,
   });
 
-  let outputTags = new Set([currentTag]);
+  let outputTags = [`${prefix}${currentTag}`];
   core.debug(`tagrefs: ${tagrefs}`);
   if (semver.prerelease(currentTag)) {
     return outputTags;
@@ -7878,9 +7878,9 @@ async function calculateTags(token, owner, repo, ref) {
   if (!tags.length || semver.compare(currentTag, tags[0]) >= 0) {
     const major = semver.major(currentTag);
     const minor = semver.minor(currentTag);
-    outputTags.add([major, minor].join("."));
-    outputTags.add(String(major));
-    outputTags.add("latest");
+    outputTags.push(`${prefix}${major}.${minor}`);
+    outputTags.push(`${prefix}${major}`);
+    outputTags.push(`${prefix}latest`);
   }
   core.debug(`outputTags: ${outputTags}`);
   return outputTags;
@@ -7891,18 +7891,18 @@ async function run() {
     // The workflow must set githubToken to the GitHub Secret Token
     // githubToken: ${{ secrets.GITHUB_TOKEN }}
     const githubToken = core.getInput("githubToken");
+    const prefix = core.getInput("prefix");
 
-    console.debug(JSON.stringify(github.context));
-    const allTags = Array.from(
-      await calculateTags(
-        githubToken,
-        github.context.payload.repository.owner.login,
-        github.context.payload.repository.name,
-        github.context.payload.ref
-      )
+    core.debug(JSON.stringify(github.context));
+    const allTags = await calculateTags(
+      githubToken,
+      github.context.payload.repository.owner.login,
+      github.context.payload.repository.name,
+      github.context.payload.ref,
+      prefix
     );
 
-    console.log(allTags);
+    core.info(allTags);
     core.setOutput("tags", allTags);
   } catch (error) {
     core.setFailed(error.message);

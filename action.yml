@@ -5,6 +5,10 @@ inputs:
   githubToken:
     required: true
     description: GitHub token
+  prefix:
+    required: false
+    description: Prefix each tag with this string, e.g. "docker/repository:"
+    default: ""
 outputs:
   tags:
     description: List of calculated tags

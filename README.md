@@ -18,25 +18,40 @@ Current tag `1.2.3` but the repository already contains a more recent tag `2.0.0
 
 - `githubToken`: The GitHub token, required so this action can comment on pull requests.
 
-## Optional input parameters
+## Optional parameters
 
-- `binderUrl`: Optionally specify an alternative BinderHub instead of mybinder.org.
-  The URL `<binderUrl>/badge_logo.svg` must exist, and will be used as the badge for linking.
+- `prefix`: A string that each returned tag should be prefixed with, for example to tag a Docker container set this to `user/repository:`.
 
 ## Example
 
 ```yaml
-name: binder-badge
+name: Docker build
+
 on:
-  pull_request_target:
+  - push
 
 jobs:
-  badge:
-    runs-on: ubuntu-latest
+  docker:
+    runs-on: ubuntu-18.04
     steps:
-      - uses: manics/action-major-minor-tag-calculator@main
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Get other tags
+        id: gettags
+        uses: manics/action-major-minor-tag-calculator@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      # https://github.com/docker/build-push-action
+      - name: Build Docker image
+        uses: docker/build-push-action@v2
+        with:
+          repository: action-major-minor-tag-calculator-test
+          tags: ${{ join(fromJson(steps.gettags.outputs.tags)) }}
+          push: true
 ```
 
 ## Developer notes
