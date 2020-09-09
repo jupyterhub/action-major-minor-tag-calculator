@@ -11,9 +11,9 @@ Any other suffixes are treated as a pre-release, and are not supported.
 
 ## Examples
 
-Current and latest tag: `1.2.3`, returned tags: `[1.2.3, 1.2.0, 1.0.0, latest]`.
+Current and latest tag: `1.2.3`, returned tags: `[1.2.3, 1.2, 1, latest]`.
 
-Current tag `1.2.3` but the repository already contains a more recent tag `2.0.0`: return only `[1.2.3]`.
+Current tag `1.2.3` but the repository already contains a more recent tag `2.0.0`: return `[1.2.3, 1.2, 1]`.
 
 ## Required input parameters
 
