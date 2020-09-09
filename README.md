@@ -42,14 +42,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      # https://github.com/manics/action-major-minor-tag-calculator-test
       - name: Get other tags
         id: gettags
         uses: manics/action-major-minor-tag-calculator@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "action-major-minor-tag-calculator-test:"
+          prefix: "manics/action-major-minor-tag-calculator-test:"
 
       # https://github.com/docker/build-push-action
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
