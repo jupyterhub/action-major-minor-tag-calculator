@@ -7847,11 +7847,13 @@ const { env } = __webpack_require__(1765);
 const semver = __webpack_require__(1383);
 
 async function calculateTags(token, owner, repo, ref) {
+  core.debug(`ref: ${ref}`);
   if (!ref.startsWith("refs/tags/")) {
     throw new Error(`Not a tag: ${ref}`);
   }
 
   const currentTag = ref.substring(10);
+  core.debug(`currentTag: ${currentTag}`);
   if (!semver.valid(currentTag)) {
     throw new Error(`Invalid semver tag: ${currentTag}`);
   }
@@ -7863,6 +7865,7 @@ async function calculateTags(token, owner, repo, ref) {
   });
 
   let outputTags = new Set([currentTag]);
+  core.debug(`tagrefs: ${tagrefs}`);
   if (semver.prerelease(currentTag)) {
     return outputTags;
   }
@@ -7870,6 +7873,7 @@ async function calculateTags(token, owner, repo, ref) {
   // Ignore existing pre-release tags
   let tags = tagrefs.map((a) => a.name).filter((t) => !semver.prerelease(t));
   tags.sort((a, b) => -semver.compare(a, b));
+  core.debug(`tags: ${tags}`);
 
   if (!tags.length || semver.compare(currentTag, tags[0]) > 0) {
     const major = semver.major(currentTag);
@@ -7878,6 +7882,7 @@ async function calculateTags(token, owner, repo, ref) {
     outputTags.add(String(major));
     outputTags.add("latest");
   }
+  core.debug(`outputTags: ${outputTags}`);
   return outputTags;
 }
 
@@ -7887,6 +7892,7 @@ async function run() {
     // githubToken: ${{ secrets.GITHUB_TOKEN }}
     const githubToken = core.getInput("githubToken");
 
+    console.debug(JSON.stringify(github.context));
     const allTags = Array.from(
       await calculateTags(
         githubToken,
