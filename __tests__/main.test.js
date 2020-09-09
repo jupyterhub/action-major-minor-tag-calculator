@@ -1,8 +1,14 @@
 const { calculateTags } = require("../src/index");
 const nock = require("nock");
 
-test("No tags", async () => {
-  nock("https://api.github.com").get("/repos/owner/repo/tags").reply(200, []);
+test("No other tags", async () => {
+  nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "0.0.1",
+      },
+    ]);
   const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/0.0.1");
   expect(tags).toEqual(new Set(["0.0.1", "0.0", "0", "latest"]));
 });
@@ -13,6 +19,9 @@ test("Is the latest tag", async () => {
     .reply(200, [
       {
         name: "1.0.0",
+      },
+      {
+        name: "2.0.0",
       },
     ]);
   const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/2.0.0");
@@ -25,7 +34,12 @@ test("Not the latest major tag", async () => {
     .reply(200, [
       {
         name: "1.0.0",
+      },
+      {
         name: "2.0.0",
+      },
+      {
+        name: "1.1.0",
       },
     ]);
   const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/1.1.0");
@@ -38,8 +52,15 @@ test("Not the latest minor tag", async () => {
     .reply(200, [
       {
         name: "1.0.0",
+      },
+      {
         name: "2.0.0",
+      },
+      {
         name: "2.1.0",
+      },
+      {
+        name: "2.0.1",
       },
     ]);
   const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/2.0.1");
@@ -52,7 +73,12 @@ test("Ignore existing pre-releases", async () => {
     .reply(200, [
       {
         name: "1.0.0",
+      },
+      {
         name: "2.0.0-rc1",
+      },
+      {
+        name: "1.1.0",
       },
     ]);
   const tags = await calculateTags("TOKEN", "owner", "repo", "refs/tags/1.1.0");
@@ -66,6 +92,7 @@ test("Pre-release tag", async () => {
       {
         name: "1.0.0",
       },
+      { name: "2.0.0-rc1" },
     ]);
   const tags = await calculateTags(
     "TOKEN",

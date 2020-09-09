@@ -35,7 +35,7 @@ async function calculateTags(token, owner, repo, ref) {
   tags.sort((a, b) => -semver.compare(a, b));
   core.debug(`tags: ${tags}`);
 
-  if (!tags.length || semver.compare(currentTag, tags[0]) > 0) {
+  if (!tags.length || semver.compare(currentTag, tags[0]) >= 0) {
     const major = semver.major(currentTag);
     const minor = semver.minor(currentTag);
     outputTags.add([major, minor].join("."));
