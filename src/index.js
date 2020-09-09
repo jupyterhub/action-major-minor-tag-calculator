@@ -56,9 +56,9 @@ async function run() {
     const allTags = Array.from(
       await calculateTags(
         githubToken,
-        github.context.repo.owner,
-        github.context.repo.name,
-        env["GITHUB_REF"]
+        github.context.payload.repository.owner.login,
+        github.context.payload.repository.name,
+        github.context.payload.ref
       )
     );
 
