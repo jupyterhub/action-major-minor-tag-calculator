@@ -1,4 +1,4 @@
-const { calculateTags } = require("../index");
+const { calculateTags } = require("../src/index");
 const nock = require("nock");
 
 test("No tags", async () => {

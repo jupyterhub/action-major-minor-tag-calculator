@@ -2,7 +2,7 @@
   "name": "major-minor-tag-calculator",
   "version": "0.0.1",
   "description": "Calculate major and minor semver tags, e.g. for tagging containers",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "build": "npm install",
     "format": "prettier --write .",
