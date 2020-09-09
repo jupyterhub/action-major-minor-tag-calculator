@@ -1,0 +1,10 @@
+name: major-minor-tag-calculator
+description: Calculate major and minor semver tags, e.g. for tagging containers
+author: Simon Li
+inputs:
+  githubToken:
+    required: true
+    description: GitHub token
+runs:
+  using: node12
+  main: dist/index.js

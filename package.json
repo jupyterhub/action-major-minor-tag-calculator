@@ -1,0 +1,33 @@
+{
+  "name": "major-minor-tag-calculator",
+  "version": "0.0.1",
+  "description": "Calculate major and minor semver tags, e.g. for tagging containers",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm install",
+    "format": "prettier --write .",
+    "lint": "prettier --check . && eslint .",
+    "package": "ncc build --source-map --license licenses.txt",
+    "test": "jest",
+    "all": "npm run build && npm run format && npm run lint && npm run package && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/manics/action-major-minor-tag-calculator"
+  },
+  "author": "OME",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.2.5",
+    "@actions/github": "^4.0.0",
+    "semver": "^7.3.2"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.24.0",
+    "eslint": "^7.8.1",
+    "eslint-plugin-jest": "^24.0.0",
+    "jest": "^26.4.2",
+    "nock": "^13.0.4",
+    "prettier": "^2.1.1"
+  }
+}
