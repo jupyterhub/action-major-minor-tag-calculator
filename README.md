@@ -34,7 +34,7 @@ jobs:
   badge:
     runs-on: ubuntu-latest
     steps:
-      - uses: manics/action-binderbadge@main
+      - uses: manics/action-major-minor-tag-calculator@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
 ```

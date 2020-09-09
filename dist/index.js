@@ -7888,7 +7888,7 @@ async function run() {
     const githubToken = core.getInput("githubToken");
 
     const allTags = Array.from(
-      calculateTags(
+      await calculateTags(
         githubToken,
         github.context.repo.owner,
         github.context.repo.name,
@@ -7897,7 +7897,7 @@ async function run() {
     );
 
     console.log(allTags);
-    core.setOutput(allTags);
+    core.setOutput("tags", allTags);
   } catch (error) {
     core.setFailed(error.message);
   }

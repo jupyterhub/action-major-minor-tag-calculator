@@ -5,6 +5,9 @@ inputs:
   githubToken:
     required: true
     description: GitHub token
+outputs:
+  tags:
+    description: List of calculated tags
 runs:
   using: node12
   main: dist/index.js
