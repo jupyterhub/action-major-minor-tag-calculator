@@ -16,7 +16,7 @@ Current tag `1.2.3` but the repository already contains a more recent tag `2.0.0
 
 ## Required input parameters
 
-- `githubToken`: The GitHub token, required so this action can comment on pull requests.
+- `githubToken`: The GitHub token, required so this action can fetch tags using the GitHub API.
 
 ## Optional parameters
 
@@ -28,7 +28,9 @@ Current tag `1.2.3` but the repository already contains a more recent tag `2.0.0
 name: Docker build
 
 on:
-  - push
+  push:
+    tags:
+      - "*"
 
 jobs:
   docker:
@@ -44,12 +46,18 @@ jobs:
         uses: manics/action-major-minor-tag-calculator@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "action-major-minor-tag-calculator-test:"
 
       # https://github.com/docker/build-push-action
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Build Docker image
         uses: docker/build-push-action@v2
         with:
-          repository: action-major-minor-tag-calculator-test
           tags: ${{ join(fromJson(steps.gettags.outputs.tags)) }}
           push: true
 ```
