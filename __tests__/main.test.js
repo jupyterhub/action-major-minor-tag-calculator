@@ -1,8 +1,10 @@
+"use strict";
+
 const { calculateTags } = require("../src/index");
 const nock = require("nock");
 
 test("No other tags", async () => {
-  nock("https://api.github.com")
+  const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
       {
@@ -17,10 +19,11 @@ test("No other tags", async () => {
     ""
   );
   expect(tags).toEqual(["0.0.1", "0.0", "0", "latest"]);
+  scope.done();
 });
 
 test("Is the latest tag", async () => {
-  nock("https://api.github.com")
+  const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
       {
@@ -38,14 +41,15 @@ test("Is the latest tag", async () => {
     ""
   );
   expect(tags).toEqual(["2.0.0", "2.0", "2", "latest"]);
+  scope.done();
 });
 
 test("Not the latest major tag", async () => {
-  nock("https://api.github.com")
+  const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
       {
-        name: "1.0.0",
+        name: "1.0.23",
       },
       {
         name: "2.0.0",
@@ -61,11 +65,12 @@ test("Not the latest major tag", async () => {
     "refs/tags/1.1.0",
     ""
   );
-  expect(tags).toEqual(["1.1.0"]);
+  expect(tags).toEqual(["1.1.0", "1.1", "1"]);
+  scope.done();
 });
 
 test("Not the latest minor tag", async () => {
-  nock("https://api.github.com")
+  const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
       {
@@ -75,55 +80,49 @@ test("Not the latest minor tag", async () => {
         name: "2.0.0",
       },
       {
-        name: "2.1.0",
+        name: "2.10.0",
       },
       {
-        name: "2.0.1",
+        name: "2.2.1",
       },
     ]);
   const tags = await calculateTags(
     "TOKEN",
     "owner",
     "repo",
-    "refs/tags/2.0.1",
+    "refs/tags/2.2.1",
     ""
   );
-  expect(tags).toEqual(["2.0.1"]);
+  expect(tags).toEqual(["2.2.1", "2.2"]);
+  scope.done();
 });
 
-test("Ignore existing pre-releases", async () => {
-  nock("https://api.github.com")
+test("Includes pre-releases", async () => {
+  const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
       {
         name: "1.0.0",
       },
       {
-        name: "2.0.0-rc1",
+        name: "2.0.0-1",
       },
       {
-        name: "1.1.0",
+        name: "1.1.0-1",
       },
     ]);
   const tags = await calculateTags(
     "TOKEN",
     "owner",
     "repo",
-    "refs/tags/1.1.0",
+    "refs/tags/1.1.0-2",
     ""
   );
-  expect(tags).toEqual(["1.1.0", "1.1", "1", "latest"]);
+  expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1"]);
+  scope.done();
 });
 
-test("Pre-release tag", async () => {
-  nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.0",
-      },
-      { name: "2.0.0-rc1" },
-    ]);
+test("Unsupported prerelease tag", async () => {
   const tags = await calculateTags(
     "TOKEN",
     "owner",
@@ -147,7 +146,7 @@ test("Invalid semver tag", async () => {
 });
 
 test("Prefix", async () => {
-  nock("https://api.github.com")
+  const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
       {
@@ -167,4 +166,5 @@ test("Prefix", async () => {
     "prefix:0",
     "prefix:latest",
   ]);
+  scope.done();
 });

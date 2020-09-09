@@ -7846,6 +7846,11 @@ const github = __webpack_require__(5438);
 const { env } = __webpack_require__(1765);
 const semver = __webpack_require__(1383);
 
+function supportedPrerelease(pre) {
+  // Supported prereleases are either empty or digits only
+  return !pre.length || String(pre).match(/^\d+$/);
+}
+
 async function calculateTags(token, owner, repo, ref, prefix) {
   core.debug(`ref: ${ref}`);
   if (!ref.startsWith("refs/tags/")) {
@@ -7858,29 +7863,51 @@ async function calculateTags(token, owner, repo, ref, prefix) {
     throw new Error(`Invalid semver tag: ${currentTag}`);
   }
 
+  const current = semver.parse(currentTag, { includePrerelease: true });
+  if (!supportedPrerelease(current.prerelease)) {
+    core.warning(`Tag prerelease ${currentTag} is not supported`);
+    return [`${prefix}${currentTag}`];
+  }
+
   const octokit = github.getOctokit(token);
   const tagrefs = await octokit.paginate(octokit.repos.listTags, {
     owner: owner,
     repo: repo,
   });
+  const parsedTagrefs = tagrefs.map((a) =>
+    semver.parse(a.name, { includePrerelease: true })
+  );
 
-  let outputTags = [`${prefix}${currentTag}`];
-  core.debug(`tagrefs: ${tagrefs}`);
-  if (semver.prerelease(currentTag)) {
-    return outputTags;
-  }
-
-  // Ignore existing pre-release tags
-  let tags = tagrefs.map((a) => a.name).filter((t) => !semver.prerelease(t));
-  tags.sort((a, b) => -semver.compare(a, b));
+  const tags = parsedTagrefs
+    .filter((t) => supportedPrerelease(t.prerelease))
+    .sort((a, b) => semver.compare(a, b))
+    .reverse();
   core.debug(`tags: ${tags}`);
 
-  if (!tags.length || semver.compare(currentTag, tags[0]) >= 0) {
-    const major = semver.major(currentTag);
-    const minor = semver.minor(currentTag);
-    outputTags.push(`${prefix}${major}.${minor}`);
-    outputTags.push(`${prefix}${major}`);
+  const majorTags = tags.filter((t) => t.major == current.major);
+  core.debug(`majorTags: ${majorTags}`);
+
+  const minorTags = majorTags.filter((t) => t.minor == current.minor);
+  core.debug(`minorTags: ${minorTags}`);
+
+  let outputTags = [];
+  if (current.prerelease.length) {
+    outputTags.push(`${prefix}${current.version}`);
+  }
+
+  outputTags.push(
+    `${prefix}${current.major}.${current.minor}.${current.patch}`
+  );
+
+  if (!tags.length || semver.compare(current, tags[0]) >= 0) {
+    outputTags.push(`${prefix}${current.major}.${current.minor}`);
+    outputTags.push(`${prefix}${current.major}`);
     outputTags.push(`${prefix}latest`);
+  } else if (semver.compare(current, majorTags[0]) >= 0) {
+    outputTags.push(`${prefix}${current.major}.${current.minor}`);
+    outputTags.push(`${prefix}${current.major}`);
+  } else if (semver.compare(current, minorTags[0]) >= 0) {
+    outputTags.push(`${prefix}${current.major}.${current.minor}`);
   }
   core.debug(`outputTags: ${outputTags}`);
   return outputTags;

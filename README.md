@@ -6,7 +6,8 @@ Calculate major and minor semver tags, e.g. for tagging containers.
 
 This will calculate major and minor prefix tags for when you want to provide users with a way to obtain the latest `major` or `major.minor` version.
 
-Pre-releases are ignored.
+Suffixes of the form `-[0-9]+` are supported since this is often used as a build number.
+Any other suffixes are treated as a pre-release, and are not supported.
 
 ## Examples
 
