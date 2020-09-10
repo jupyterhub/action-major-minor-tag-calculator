@@ -135,8 +135,8 @@ test("Unsupported prerelease tag", async () => {
 
 test("Not a tag", async () => {
   await expect(
-    calculateTags("TOKEN", "owner", "repo", "refs/heads/main", "")
-  ).rejects.toEqual(new Error("Not a tag: refs/heads/main"));
+    calculateTags("TOKEN", "owner", "repo", "something/else", "")
+  ).rejects.toEqual(new Error("Not a tag: something/else"));
 });
 
 test("Invalid semver tag", async () => {
@@ -167,4 +167,15 @@ test("Prefix", async () => {
     "prefix:latest",
   ]);
   scope.done();
+});
+
+test("Branch", async () => {
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/heads/main",
+    ""
+  );
+  expect(tags).toEqual(["main"]);
 });

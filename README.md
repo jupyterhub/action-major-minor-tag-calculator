@@ -9,11 +9,15 @@ This will calculate major and minor prefix tags for when you want to provide use
 Suffixes of the form `-[0-9]+` are supported since this is often used as a build number.
 Any other suffixes are treated as a pre-release, and are not supported.
 
+If this called on a branch instead of a tag just the branch-name is returned as the tag.
+
 ## Examples
 
 Current and latest tag: `1.2.3`, returned tags: `[1.2.3, 1.2, 1, latest]`.
 
 Current tag `1.2.3` but the repository already contains a more recent tag `2.0.0`: return `[1.2.3, 1.2, 1]`.
+
+Branch `main`, return `[main]`.
 
 ## Required input parameters
 
@@ -30,6 +34,8 @@ name: Docker build
 
 on:
   push:
+    # Remove branches if you only want tags
+    branches:
     tags:
       - "*"
 
