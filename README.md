@@ -36,6 +36,7 @@ on:
   push:
     # Remove branches if you only want tags
     branches:
+      - "*"
     tags:
       - "*"
 
