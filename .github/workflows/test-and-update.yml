@@ -3,6 +3,8 @@ on:
   push:
     branches-ignore:
       - main
+    tags-ignore:
+      - "*"
 
 jobs:
   test-and-update:
