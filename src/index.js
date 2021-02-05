@@ -80,14 +80,15 @@ async function calculateTags(token, owner, repo, ref, prefix) {
     `${prefix}${current.major}.${current.minor}.${current.patch}`
   );
 
-  if (!tags.length || semver.compare(current, tags[0]) >= 0) {
+  core.debug(semver.compare(current, tags[0]) >= 0);
+  if (!tags.length || semver.compare(current.toString().split("-")[0], tags[0]) >= 0) {
     outputTags.push(`${prefix}${current.major}.${current.minor}`);
     outputTags.push(`${prefix}${current.major}`);
     outputTags.push(`${prefix}latest`);
-  } else if (semver.compare(current, majorTags[0]) >= 0) {
+  } else if (semver.compare(current.toString().split("-")[0], majorTags[0]) >= 0) {
     outputTags.push(`${prefix}${current.major}.${current.minor}`);
     outputTags.push(`${prefix}${current.major}`);
-  } else if (semver.compare(current, minorTags[0]) >= 0) {
+  } else if (semver.compare(current.toString().split("-")[0], minorTags[0]) >= 0) {
     outputTags.push(`${prefix}${current.major}.${current.minor}`);
   }
   core.debug(`outputTags: ${outputTags}`);

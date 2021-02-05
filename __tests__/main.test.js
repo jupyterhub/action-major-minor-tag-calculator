@@ -122,6 +122,47 @@ test("Includes pre-releases", async () => {
   scope.done();
 });
 
+test("Includes pre-releases", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.0.0",
+      },
+      {
+        name: "1.1.0-1",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-2",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1", "latest"]);
+  scope.done();
+});
+
+test("Includes pre-releases", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.1.0",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-1",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1", "latest"]);
+  scope.done();
+});
+
 test("Unsupported prerelease tag", async () => {
   const tags = await calculateTags(
     "TOKEN",
@@ -183,4 +224,58 @@ test("Branch", async () => {
     ""
   );
   expect(tags).toEqual(["main"]);
+});
+
+test("Includes pre-releases", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.0.0",
+      },
+      {
+        name: "1.1.0",
+      },
+      {
+        name: "1.1.0-0",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-1",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1", "latest"]);
+  scope.done();
+});
+
+
+test("Includes pre-releases", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.0.0",
+      },
+      {
+        name: "1.1.0",
+      },
+      {
+        name: "2.0.0",
+      },
+      {
+        name: "1.1.0-0",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-1",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1"]);
+  scope.done();
 });
