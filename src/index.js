@@ -14,13 +14,17 @@ function supportedPrerelease(pre) {
 async function calculateTags(token, owner, repo, ref, prefix) {
   core.debug(`ref: ${ref}`);
 
+  if (!ref) {
+    core.debug("No ref");
+    return [];
+  }
   if (ref.startsWith("refs/heads/")) {
     const branch = ref.substring(11);
-    core.debug(`Branch: branch`);
+    core.debug(`Branch: ${branch}`);
     return [`${prefix}${branch}`];
   }
   if (!ref.startsWith("refs/tags/")) {
-    throw new Error(`Not a tag: ${ref}`);
+    throw new Error(`Not a tag or branch: ${ref}`);
   }
 
   const currentTag = ref.substring(10);

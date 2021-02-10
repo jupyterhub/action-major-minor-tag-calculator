@@ -136,13 +136,18 @@ test("Unsupported prerelease tag", async () => {
 test("Not a tag", async () => {
   await expect(
     calculateTags("TOKEN", "owner", "repo", "something/else", "")
-  ).rejects.toEqual(new Error("Not a tag: something/else"));
+  ).rejects.toEqual(new Error("Not a tag or branch: something/else"));
 });
 
 test("Invalid semver tag", async () => {
   await expect(
     calculateTags("TOKEN", "owner", "repo", "refs/tags/v1", "")
   ).rejects.toEqual(new Error("Invalid semver tag: v1"));
+});
+
+test("No ref", async () => {
+  const tags = await calculateTags("TOKEN", "owner", "repo", null, "");
+  expect(tags).toEqual([]);
 });
 
 test("Prefix", async () => {
