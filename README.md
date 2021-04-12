@@ -5,6 +5,7 @@
 This GitHub action can intelligently calculate and output a JSON formatted list of versions associated tags when a SemVer2 compliant tag is pushed go a GitHub repository.
 
 This action can be useful if a git tag like `1.2.3` is pushed to a GitHub repo and you want a GitHub Workflow's job to not only take action with regards to the pushed tag `1.2.3` specifically, but also to related tags like `1.2`, `1`, and `latest` assuming the pushed tag's version is new enough to represent those more general tags.
+This pattern is often used for tagging containers.
 
 ## Example output
 
@@ -12,7 +13,7 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 
 | Pushed reference | GitHub repo tags | `tags` output                        | Comment                                                                                |
 | ---------------- | ---------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
-| ``               | ...              | `"[]"`                               |
+|                  | ...              | `"[]"`                               |
 | `main`           | ...              | `"[main]"`                           | Branches                                                                               |
 | `1.2.3`          | `1.2.0`          | `"[1.2.3, 1.2, 1, latest]"`          |
 | `1.2.3`          | `1.2.0`, `2.0.0` | `"[1.2.3, 1.2, 1]"`                  |
@@ -36,6 +37,9 @@ name: Build and publish image to DockerHub
 
 on:
   push:
+    # Uncomment this if you also want a tag created for all pushed branches
+    # branches:
+    #   - "*"
     tags:
       - "*"
 
@@ -59,7 +63,7 @@ jobs:
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN || secrets.DOCKERHUB_PASSWORD }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
       # https://github.com/docker/build-push-action
       - name: Build, tag, and push images
