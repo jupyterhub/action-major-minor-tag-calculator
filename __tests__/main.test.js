@@ -122,7 +122,7 @@ test("Includes pre-releases", async () => {
   scope.done();
 });
 
-test("Includes pre-releases", async () => {
+test("Includes pre-releases jump one", async () => {
   const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
@@ -144,7 +144,7 @@ test("Includes pre-releases", async () => {
   scope.done();
 });
 
-test("Includes pre-releases", async () => {
+test("Includes pre-releases no jump", async () => {
   const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
@@ -226,7 +226,7 @@ test("Branch", async () => {
   expect(tags).toEqual(["main"]);
 });
 
-test("Includes pre-releases", async () => {
+test("Includes pre-releases one", async () => {
   const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
@@ -251,8 +251,7 @@ test("Includes pre-releases", async () => {
   scope.done();
 });
 
-
-test("Includes pre-releases", async () => {
+test("Includes pre-releases one with new tag", async () => {
   const scope = nock("https://api.github.com")
     .get("/repos/owner/repo/tags")
     .reply(200, [
