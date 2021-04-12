@@ -11,16 +11,16 @@ This pattern is often used for tagging containers.
 
 The GitHub action's only output is named `tags` and is a JSON formatted list. See the example workflow below for details on how to convert the JSON formatted list to something else.
 
-| Pushed reference | GitHub repo tags | `tags` output                        | Comment                                                                                |
-| ---------------- | ---------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
-|                  | ...              | `"[]"`                               |
-| `main`           | ...              | `"[main]"`                           | Branches                                                                               |
-| `1.2.3`          | `1.2.0`          | `"[1.2.3, 1.2, 1, latest]"`          |
-| `1.2.3`          | `1.2.0`, `2.0.0` | `"[1.2.3, 1.2, 1]"`                  |
-| `1.2.3`          | `1.2.0`, `1.3.0` | `"[1.2.3, 1.2]"`                     |
-| `1.2.3`          | `1.2.0`, `1.2.5` | `"[1.2.3]"`                          |
-| `1.2.3-alpha.1`  | `1.2.0`          | `"[1.2.3-alpha.1]"`                  | Non-supported pre-release tags                                                         |
-| `1.2.3-4`        | `1.2.0`, `1.2.3` | `"[1.2.3-4, 1.2.3, 1.2, 1, latest]"` | Supported pre-release tags (build numbers, with a version suffix pattern of `-[0-9]+`) |
+| Pushed reference | GitHub repo tags | `tags` output                        | Comment                                                                       |
+| ---------------- | ---------------- | ------------------------------------ | ----------------------------------------------------------------------------- |
+|                  | ...              | `"[]"`                               | No git reference associated with the triggering workflow                      |
+| `main`           | ...              | `"[main]"`                           | A branch reference get no associated version tags                             |
+| `1.2.3`          | `1.2.0`          | `"[1.2.3, 1.2, 1, latest]"`          |                                                                               |
+| `1.2.3`          | `1.2.0`, `2.0.0` | `"[1.2.3, 1.2, 1]"`                  |                                                                               |
+| `1.2.3`          | `1.2.0`, `1.3.0` | `"[1.2.3, 1.2]"`                     |                                                                               |
+| `1.2.3`          | `1.2.0`, `1.2.5` | `"[1.2.3]"`                          |                                                                               |
+| `1.2.3-alpha.1`  | `1.2.0`          | `"[1.2.3-alpha.1]"`                  | A pre-release suffix on a version is treated like a branch                    |
+| `1.2.3-4`        | `1.2.0`, `1.2.3` | `"[1.2.3-4, 1.2.3, 1.2, 1, latest]"` | A build number suffix on a version is treated like the version but even newer |
 
 ## Required input parameters
 
