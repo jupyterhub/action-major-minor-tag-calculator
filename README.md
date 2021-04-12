@@ -1,6 +1,6 @@
 # major-minor-tag-calculator GitHub Action
 
-[![build-test](https://github.com/manics/action-major-minor-tag-calculator/workflows/build-test/badge.svg)](https://github.com/manics/action-major-minor-tag-calculator/actions)
+[![build-test](https://github.com/jupyterhub/action-major-minor-tag-calculator/workflows/build-test/badge.svg)](https://github.com/jupyterhub/action-major-minor-tag-calculator/actions)
 
 Calculate major and minor semver tags, e.g. for tagging containers.
 
@@ -49,13 +49,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      # https://github.com/manics/action-major-minor-tag-calculator-test
+      # https://github.com/jupyterhub/action-major-minor-tag-calculator-test
       - name: Get other tags
         id: gettags
-        uses: manics/action-major-minor-tag-calculator@main
+        uses: jupyterhub/action-major-minor-tag-calculator@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "manics/action-major-minor-tag-calculator-test:"
+          prefix: "jupyterhub/action-major-minor-tag-calculator-test:"
 
       # https://github.com/docker/build-push-action
 
