@@ -10,16 +10,16 @@ This action can be useful if a git tag like `1.2.3` is pushed to a GitHub repo a
 
 The GitHub action's only output is named `tags` and is a JSON formatted list. See the example workflow below for details on how to convert the JSON formatted list to something else.
 
-Pushed reference | GitHub repo tags | `tags` output                        | Comment
--                | -                | -                                    | -
-``               | ...              | `"[]"`                               |
-`main`           | ...              | `"[main]"`                           | Branches
-`1.2.3`          | `1.2.0`          | `"[1.2.3, 1.2, 1, latest]"`          |
-`1.2.3`          | `1.2.0`, `2.0.0` | `"[1.2.3, 1.2, 1]"`                  |
-`1.2.3`          | `1.2.0`, `1.3.0` | `"[1.2.3, 1.2]"`                     |
-`1.2.3`          | `1.2.0`, `1.2.5` | `"[1.2.3]"`                          |
-`1.2.3-alpha.1`  | `1.2.0`          | `"[1.2.3-alpha.1]"`                  | Non-supported pre-release tags
-`1.2.3-4`        | `1.2.0`, `1.2.3` | `"[1.2.3-4, 1.2.3, 1.2, 1, latest]"` | Supported pre-release tags (build numbers, with a version suffix pattern of `-[0-9]+`)
+| Pushed reference | GitHub repo tags | `tags` output                        | Comment                                                                                |
+| ---------------- | ---------------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| ``               | ...              | `"[]"`                               |
+| `main`           | ...              | `"[main]"`                           | Branches                                                                               |
+| `1.2.3`          | `1.2.0`          | `"[1.2.3, 1.2, 1, latest]"`          |
+| `1.2.3`          | `1.2.0`, `2.0.0` | `"[1.2.3, 1.2, 1]"`                  |
+| `1.2.3`          | `1.2.0`, `1.3.0` | `"[1.2.3, 1.2]"`                     |
+| `1.2.3`          | `1.2.0`, `1.2.5` | `"[1.2.3]"`                          |
+| `1.2.3-alpha.1`  | `1.2.0`          | `"[1.2.3-alpha.1]"`                  | Non-supported pre-release tags                                                         |
+| `1.2.3-4`        | `1.2.0`, `1.2.3` | `"[1.2.3-4, 1.2.3, 1.2, 1, latest]"` | Supported pre-release tags (build numbers, with a version suffix pattern of `-[0-9]+`) |
 
 ## Required input parameters
 
