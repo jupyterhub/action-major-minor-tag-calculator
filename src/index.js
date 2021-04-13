@@ -7,11 +7,22 @@ const { env } = require("process");
 const semver = require("semver");
 
 function supportedPrerelease(pre) {
-  // Supported prereleases are either empty or digits only
+  // Supported prereleases are either empty or digits only.
+  //
+  // Example: The semver version 1.2.3-4 is a supported but 1.2.3-alpha.1 isn't
+  //          supported.
+  //
   return !pre.length || String(pre).match(/^\d+$/);
 }
 
 async function calculateTags(token, owner, repo, ref, prefix) {
+  // About the parameters:
+  // - token is used to authenticate against the GitHub API that in turn is used
+  //   to list tags for github.com/<owner>/<repo>.
+  // - ref is the git reference that triggered the GitHub Workflow's Job's step
+  //   where this action runs and is what decides the output given the GitHub
+  //   repo's available tags.
+  //
   core.debug(`ref: ${ref}`);
 
   if (!ref) {
