@@ -188,6 +188,31 @@ test("Handling of an outdated build number", async () => {
   scope.done();
 });
 
+test("Handling build number comparisons numerically", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.0.0",
+      },
+      {
+        name: "2.0.0-2",
+      },
+      {
+        name: "1.1.0-2",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-10",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-10", "1.1.0", "1.1", "1"]);
+  scope.done();
+});
+
 test("Unsupported prerelease tag", async () => {
   const tags = await calculateTags(
     "TOKEN",
