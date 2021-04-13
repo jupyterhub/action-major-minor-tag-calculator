@@ -122,6 +122,97 @@ test("Includes pre-releases", async () => {
   scope.done();
 });
 
+test("Includes pre-releases jump one", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.0.0",
+      },
+      {
+        name: "1.1.0-1",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-2",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1", "latest"]);
+  scope.done();
+});
+
+test("Includes pre-releases no jump", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.1.0",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-1",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1", "latest"]);
+  scope.done();
+});
+
+test("Handling of an outdated build number", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.0.0",
+      },
+      {
+        name: "2.0.0-2",
+      },
+      {
+        name: "1.1.0-2",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-1",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-1"]);
+  scope.done();
+});
+
+test("Handling build number comparisons numerically", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.0.0",
+      },
+      {
+        name: "2.0.0-2",
+      },
+      {
+        name: "1.1.0-2",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-10",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-10", "1.1.0", "1.1", "1"]);
+  scope.done();
+});
+
 test("Unsupported prerelease tag", async () => {
   const tags = await calculateTags(
     "TOKEN",
@@ -183,4 +274,57 @@ test("Branch", async () => {
     ""
   );
   expect(tags).toEqual(["main"]);
+});
+
+test("Includes pre-releases one", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.0.0",
+      },
+      {
+        name: "1.1.0",
+      },
+      {
+        name: "1.1.0-0",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-1",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1", "latest"]);
+  scope.done();
+});
+
+test("Includes pre-releases one with new tag", async () => {
+  const scope = nock("https://api.github.com")
+    .get("/repos/owner/repo/tags")
+    .reply(200, [
+      {
+        name: "1.0.0",
+      },
+      {
+        name: "1.1.0",
+      },
+      {
+        name: "2.0.0",
+      },
+      {
+        name: "1.1.0-0",
+      },
+    ]);
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    "refs/tags/1.1.0-1",
+    ""
+  );
+  expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1"]);
+  scope.done();
 });

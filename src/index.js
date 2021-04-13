@@ -15,6 +15,11 @@ function supportedPrerelease(pre) {
   return !pre.length || String(pre).match(/^\d+$/);
 }
 
+function equalMajorMinorPatch(a, b) {
+  // Predicate function for filtering
+  return a.major == b.major && a.minor == b.minor && a.patch == b.patch;
+}
+
 async function calculateTags(token, owner, repo, ref, prefix) {
   // About the parameters:
   // - token is used to authenticate against the GitHub API that in turn is used
@@ -74,20 +79,36 @@ async function calculateTags(token, owner, repo, ref, prefix) {
   let outputTags = [];
   if (current.prerelease.length) {
     outputTags.push(`${prefix}${current.version}`);
+
+    // return without additional output tags if we got an outdated build number
+    const similarTags = tags.filter(
+      (t) => t.prerelease.length && equalMajorMinorPatch(current, t)
+    );
+    if (similarTags.length && semver.compare(current, similarTags[0]) < 0) {
+      return outputTags;
+    }
   }
 
   outputTags.push(
     `${prefix}${current.major}.${current.minor}.${current.patch}`
   );
 
-  if (!tags.length || semver.compare(current, tags[0]) >= 0) {
+  core.debug(semver.compare(current, tags[0]) >= 0);
+  if (
+    !tags.length ||
+    semver.compare(current.toString().split("-")[0], tags[0]) >= 0
+  ) {
     outputTags.push(`${prefix}${current.major}.${current.minor}`);
     outputTags.push(`${prefix}${current.major}`);
     outputTags.push(`${prefix}latest`);
-  } else if (semver.compare(current, majorTags[0]) >= 0) {
+  } else if (
+    semver.compare(current.toString().split("-")[0], majorTags[0]) >= 0
+  ) {
     outputTags.push(`${prefix}${current.major}.${current.minor}`);
     outputTags.push(`${prefix}${current.major}`);
-  } else if (semver.compare(current, minorTags[0]) >= 0) {
+  } else if (
+    semver.compare(current.toString().split("-")[0], minorTags[0]) >= 0
+  ) {
     outputTags.push(`${prefix}${current.major}.${current.minor}`);
   }
   core.debug(`outputTags: ${outputTags}`);
