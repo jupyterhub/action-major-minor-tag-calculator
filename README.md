@@ -9,7 +9,7 @@ This pattern is often used for tagging containers.
 
 ## Example output
 
-The GitHub action's only output is named `tags` and is a JSON formatted list. See the example workflow below for details on how to convert the JSON formatted list to something else.
+The GitHub action's only output is named `tags` and is a JSON formatted list. See the example workflow below for details on how to convert the JSON formatted list to something else. Tags will always be in decreasing order of specificity.
 
 | Pushed reference | GitHub repo tags | `tags` output                        | Comment                                                                       |
 | ---------------- | ---------------- | ------------------------------------ | ----------------------------------------------------------------------------- |
