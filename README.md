@@ -33,6 +33,10 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
   This can be useful for running a workflow in pull requests where no suitable git references are present.
   `prefix` is _not_ automatically added.
 
+## Output parameters
+
+- `tags`: A JSON formatted list of calculated tags.
+
 ## Example workflow
 
 ```yaml
