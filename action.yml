@@ -7,9 +7,9 @@ description: Calculate major and minor semver tags, e.g. for tagging containers
 # Manually keep the input-, and output- descriptions in sync with the readme!
 inputs:
   githubToken:
-    required: true
+    required: false
     description: |-
-      The GitHub token, required so this action can fetch tags using the GitHub API.
+      The GitHub token, required so this action can fetch tags using the GitHub API. If this this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
     default: ""
   prefix:
     required: false

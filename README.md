@@ -22,9 +22,9 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 | `1.2.3-alpha.1`  | `1.2.0`          | `"[1.2.3-alpha.1]"`                  | A pre-release suffix on a version is treated like a branch                    |
 | `1.2.3-4`        | `1.2.0`, `1.2.3` | `"[1.2.3-4, 1.2.3, 1.2, 1, latest]"` | A build number suffix on a version is treated like the version but even newer |
 
-## Required input parameters
+## Recommended input parameters
 
-- `githubToken`: The GitHub token, required so this action can fetch tags using the GitHub API.
+- `githubToken`: The GitHub token, required so this action can fetch tags using the GitHub API. If this this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
 
 ## Optional input parameters
 
