@@ -9,7 +9,7 @@ inputs:
   githubToken:
     required: false
     description: |-
-      The GitHub token, required so this action can fetch tags using the GitHub API. If this this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
+      The GitHub token, required so this action can fetch tags using the GitHub API. If this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
     default: ""
   prefix:
     required: false

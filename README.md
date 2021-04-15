@@ -24,7 +24,7 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 
 ## Recommended input parameters
 
-- `githubToken`: The GitHub token, required so this action can fetch tags using the GitHub API. If this this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
+- `githubToken`: The GitHub token, required so this action can fetch tags using the GitHub API. If this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
 
 ## Optional input parameters
 
