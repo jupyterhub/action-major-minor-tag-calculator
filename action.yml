@@ -1,22 +1,36 @@
+# Reference: https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions
+---
+author: Simon Li
 name: major-minor-tag-calculator
 description: Calculate major and minor semver tags, e.g. for tagging containers
-author: Simon Li
+
+# Manually keep the input-, and output- descriptions in sync with the readme!
 inputs:
   githubToken:
     required: false
-    description: GitHub token
+    description: |-
+      The GitHub token, required so this action can fetch tags using the GitHub API. If this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
     default: ""
   prefix:
     required: false
-    description: Prefix each tag with this string, e.g. "docker/repository:"
+    description: |-
+      A string that each returned tag should be prefixed with, for example to tag a Docker container set this to `user/repository:`.
     default: ""
   defaultTag:
     required: false
-    description: If the tag output would be empty return this tag instead
+    description: |-
+      If the tag output would be empty return this tag instead.
+      This can be useful for running a workflow in pull requests where no suitable git references are present.
+      `prefix` is _not_ automatically added.
     default: ""
 outputs:
   tags:
-    description: List of calculated tags
+    description: A JSON formatted list of calculated tags.
+
 runs:
   using: node12
   main: dist/index.js
+
+branding:
+  icon: bookmark
+  color: purple

@@ -9,7 +9,7 @@ This pattern is often used for tagging containers.
 
 ## Example output
 
-The GitHub action's only output is named `tags` and is a JSON formatted list. See the example workflow below for details on how to convert the JSON formatted list to something else.
+The GitHub action's only output is named `tags` and is a JSON formatted list. See the example workflow below for details on how to convert the JSON formatted list to something else. Tags will always be in decreasing order of specificity.
 
 | Pushed reference | GitHub repo tags | `tags` output                        | Comment                                                                       |
 | ---------------- | ---------------- | ------------------------------------ | ----------------------------------------------------------------------------- |
@@ -22,9 +22,9 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 | `1.2.3-alpha.1`  | `1.2.0`          | `"[1.2.3-alpha.1]"`                  | A pre-release suffix on a version is treated like a branch                    |
 | `1.2.3-4`        | `1.2.0`, `1.2.3` | `"[1.2.3-4, 1.2.3, 1.2, 1, latest]"` | A build number suffix on a version is treated like the version but even newer |
 
-## Required input parameters
+## Recommended input parameters
 
-- `githubToken`: The GitHub token, required so this action can fetch tags using the GitHub API.
+- `githubToken`: The GitHub token, required so this action can fetch tags using the GitHub API. If this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
 
 ## Optional input parameters
 
@@ -32,6 +32,10 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 - `defaultTag`: If the tag output would be empty return this tag instead.
   This can be useful for running a workflow in pull requests where no suitable git references are present.
   `prefix` is _not_ automatically added.
+
+## Output parameters
+
+- `tags`: A JSON formatted list of calculated tags.
 
 ## Example workflow
 
