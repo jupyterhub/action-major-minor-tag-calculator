@@ -16,6 +16,7 @@ test("No other tags", async () => {
     "owner",
     "repo",
     "refs/tags/0.0.1",
+    "",
     ""
   );
   expect(tags).toEqual(["0.0.1", "0.0", "0", "latest"]);
@@ -38,6 +39,7 @@ test("Is the latest tag", async () => {
     "owner",
     "repo",
     "refs/tags/2.0.0",
+    "",
     ""
   );
   expect(tags).toEqual(["2.0.0", "2.0", "2", "latest"]);
@@ -63,6 +65,7 @@ test("Not the latest major tag", async () => {
     "owner",
     "repo",
     "refs/tags/1.1.0",
+    "",
     ""
   );
   expect(tags).toEqual(["1.1.0", "1.1", "1"]);
@@ -91,6 +94,7 @@ test("Not the latest minor tag", async () => {
     "owner",
     "repo",
     "refs/tags/2.2.1",
+    "",
     ""
   );
   expect(tags).toEqual(["2.2.1", "2.2"]);
@@ -116,6 +120,7 @@ test("Includes pre-releases", async () => {
     "owner",
     "repo",
     "refs/tags/1.1.0-2",
+    "",
     ""
   );
   expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1"]);
@@ -138,6 +143,7 @@ test("Includes pre-releases jump one", async () => {
     "owner",
     "repo",
     "refs/tags/1.1.0-2",
+    "",
     ""
   );
   expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1", "latest"]);
@@ -157,6 +163,7 @@ test("Includes pre-releases no jump", async () => {
     "owner",
     "repo",
     "refs/tags/1.1.0-1",
+    "",
     ""
   );
   expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1", "latest"]);
@@ -182,6 +189,7 @@ test("Handling of an outdated build number", async () => {
     "owner",
     "repo",
     "refs/tags/1.1.0-1",
+    "",
     ""
   );
   expect(tags).toEqual(["1.1.0-1"]);
@@ -207,6 +215,7 @@ test("Handling build number comparisons numerically", async () => {
     "owner",
     "repo",
     "refs/tags/1.1.0-10",
+    "",
     ""
   );
   expect(tags).toEqual(["1.1.0-10", "1.1.0", "1.1", "1"]);
@@ -219,6 +228,7 @@ test("Unsupported prerelease tag", async () => {
     "owner",
     "repo",
     "refs/tags/2.0.0-rc1",
+    "",
     ""
   );
   expect(tags).toEqual(["2.0.0-rc1"]);
@@ -226,19 +236,31 @@ test("Unsupported prerelease tag", async () => {
 
 test("Not a tag", async () => {
   await expect(
-    calculateTags("TOKEN", "owner", "repo", "something/else", "")
+    calculateTags("TOKEN", "owner", "repo", "something/else", "", "")
   ).rejects.toEqual(new Error("Not a tag or branch: something/else"));
 });
 
 test("Invalid semver tag", async () => {
   await expect(
-    calculateTags("TOKEN", "owner", "repo", "refs/tags/v1", "")
+    calculateTags("TOKEN", "owner", "repo", "refs/tags/v1", "", "")
   ).rejects.toEqual(new Error("Invalid semver tag: v1"));
 });
 
 test("No ref", async () => {
-  const tags = await calculateTags("TOKEN", "owner", "repo", null, "");
+  const tags = await calculateTags("TOKEN", "owner", "repo", null, "", "");
   expect(tags).toEqual([]);
+});
+
+test("No ref use default", async () => {
+  const tags = await calculateTags(
+    "TOKEN",
+    "owner",
+    "repo",
+    null,
+    "",
+    "default-tag"
+  );
+  expect(tags).toEqual(["default-tag"]);
 });
 
 test("Prefix", async () => {
@@ -254,7 +276,8 @@ test("Prefix", async () => {
     "owner",
     "repo",
     "refs/tags/0.0.1",
-    "prefix:"
+    "prefix:",
+    ""
   );
   expect(tags).toEqual([
     "prefix:0.0.1",
@@ -271,6 +294,7 @@ test("Branch", async () => {
     "owner",
     "repo",
     "refs/heads/main",
+    "",
     ""
   );
   expect(tags).toEqual(["main"]);
@@ -295,6 +319,7 @@ test("Includes pre-releases one", async () => {
     "owner",
     "repo",
     "refs/tags/1.1.0-1",
+    "",
     ""
   );
   expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1", "latest"]);
@@ -323,6 +348,7 @@ test("Includes pre-releases one with new tag", async () => {
     "owner",
     "repo",
     "refs/tags/1.1.0-1",
+    "",
     ""
   );
   expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1"]);

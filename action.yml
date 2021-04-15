@@ -3,11 +3,16 @@ description: Calculate major and minor semver tags, e.g. for tagging containers
 author: Simon Li
 inputs:
   githubToken:
-    required: true
+    required: false
     description: GitHub token
+    default: ""
   prefix:
     required: false
     description: Prefix each tag with this string, e.g. "docker/repository:"
+    default: ""
+  defaultTag:
+    required: false
+    description: If the tag output would be empty return this tag instead
     default: ""
 outputs:
   tags:
