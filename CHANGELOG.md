@@ -1,3 +1,19 @@
+### v1.1.1
+
+## Bugs fixed
+
+- exclude invalid versions from existing tags [#73](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/73) ([@minrk](https://github.com/minrk))
+
+## Documentation improvements
+
+- Documentation tweaks to action.yml / README.md pre-publishing [#68](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/68) ([@consideRatio](https://github.com/consideRatio))
+
+## Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/action-major-minor-tag-calculator/graphs/contributors?from=2021-04-15&to=2021-04-19&type=c))
+
+[@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3AconsideRatio+updated%3A2021-04-15..2021-04-19&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Aminrk+updated%3A2021-04-15..2021-04-19&type=Issues)
+
 ### v1.1.0 - 2021-04-15
 
 ([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v1.0.0...81e90594b90bef0bc68479d0ab3aae33a940526e))
