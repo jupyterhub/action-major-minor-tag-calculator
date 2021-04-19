@@ -63,9 +63,9 @@ async function calculateTags(token, owner, repo, ref, prefix, defaultTag) {
     owner: owner,
     repo: repo,
   });
-  const parsedTagrefs = tagrefs.map((a) =>
-    semver.parse(a.name, { includePrerelease: true })
-  );
+  const parsedTagrefs = tagrefs
+    .filter((a) => semver.valid(a.name))
+    .map((a) => semver.parse(a.name, { includePrerelease: true }));
 
   const tags = parsedTagrefs
     .filter((t) => supportedPrerelease(t.prerelease))
