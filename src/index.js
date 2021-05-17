@@ -59,7 +59,7 @@ async function calculateTags(token, owner, repo, ref, prefix, defaultTag) {
   }
 
   const octokit = github.getOctokit(token);
-  const tagrefs = await octokit.paginate(octokit.repos.listTags, {
+  const tagrefs = await octokit.paginate(octokit.rest.repos.listTags, {
     owner: owner,
     repo: repo,
   });
