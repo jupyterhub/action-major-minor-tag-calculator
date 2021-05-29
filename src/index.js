@@ -20,7 +20,20 @@ function equalMajorMinorPatch(a, b) {
   return a.major == b.major && a.minor == b.minor && a.patch == b.patch;
 }
 
-async function calculateTags(token, owner, repo, ref, prefix, defaultTag) {
+function checkAgainstRegex(name, regexAllowed) {
+  const re = new RegExp(regexAllowed);
+  return re.test(name);
+}
+
+async function calculateTags(
+  token,
+  owner,
+  repo,
+  ref,
+  prefix,
+  defaultTag,
+  regexAllowed
+) {
   // About the parameters:
   // - token is used to authenticate against the GitHub API that in turn is used
   //   to list tags for github.com/<owner>/<repo>.
@@ -40,6 +53,12 @@ async function calculateTags(token, owner, repo, ref, prefix, defaultTag) {
   if (ref.startsWith("refs/heads/")) {
     const branch = ref.substring(11);
     core.debug(`Branch: ${branch}`);
+    if (!checkAgainstRegex(branch, regexAllowed)) {
+      if (defaultTag) {
+        return [defaultTag];
+      }
+      return [];
+    }
     return [`${prefix}${branch}`];
   }
   if (!ref.startsWith("refs/tags/")) {
@@ -125,6 +144,7 @@ async function run() {
     const githubToken = core.getInput("githubToken");
     const prefix = core.getInput("prefix");
     const defaultTag = core.getInput("defaultTag");
+    const regexAllowed = core.getInput("regexAllowed");
 
     core.debug(JSON.stringify(github.context));
     const allTags = await calculateTags(
@@ -133,7 +153,8 @@ async function run() {
       github.context.payload.repository.name,
       github.context.payload.ref,
       prefix,
-      defaultTag
+      defaultTag,
+      regexAllowed
     );
 
     core.info(allTags);
