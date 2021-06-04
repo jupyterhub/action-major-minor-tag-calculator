@@ -25,15 +25,15 @@ function checkAgainstRegex(name, regexAllowed) {
   return re.test(name);
 }
 
-async function calculateTags(
+async function calculateTags({
   token,
   owner,
   repo,
   ref,
-  prefix,
-  defaultTag,
-  regexAllowed
-) {
+  prefix = "",
+  defaultTag = "",
+  regexAllowed = "",
+}) {
   // About the parameters:
   // - token is used to authenticate against the GitHub API that in turn is used
   //   to list tags for github.com/<owner>/<repo>.
@@ -147,15 +147,15 @@ async function run() {
     const branchRegex = core.getInput("branchRegex");
 
     core.debug(JSON.stringify(github.context));
-    const allTags = await calculateTags(
-      githubToken,
-      github.context.payload.repository.owner.login,
-      github.context.payload.repository.name,
-      github.context.payload.ref,
-      prefix,
-      defaultTag,
-      branchRegex
-    );
+    const allTags = await calculateTags({
+      token: githubToken,
+      owner: github.context.payload.repository.owner.login,
+      repo: github.context.payload.repository.name,
+      ref: github.context.payload.ref,
+      prefix: prefix,
+      defaultTag: defaultTag,
+      regexAllowed: branchRegex,
+    });
 
     core.info(allTags);
     core.setOutput("tags", allTags);
