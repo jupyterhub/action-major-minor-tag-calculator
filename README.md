@@ -32,6 +32,7 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 - `defaultTag`: If the tag output would be empty return this tag instead.
   This can be useful for running a workflow in pull requests where no suitable git references are present.
   `prefix` is _not_ automatically added.
+- `branchRegex`: If a branch name does not match this regex return `defaultTag` or empty instead.
 
 ## Output parameters
 
@@ -64,6 +65,7 @@ jobs:
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "my-username/my-image-name:"
+          branchRegex: "^[^/]+$"
 
       # https://github.com/docker/login-action
       - name: Login to DockerHub

@@ -23,6 +23,11 @@ inputs:
       This can be useful for running a workflow in pull requests where no suitable git references are present.
       `prefix` is _not_ automatically added.
     default: ""
+  branchRegex:
+    required: false
+    description: |-
+      If a branch name does not match this regex return `defaultTag` or empty instead.
+    default: "^.+$"
 outputs:
   tags:
     description: A JSON formatted list of calculated tags.
