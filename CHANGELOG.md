@@ -6,6 +6,10 @@
 
 - Add branchRegex for validating/excluding branch names [#89](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/89) ([@manics](https://github.com/manics))
 
+## Maintenance and upkeep improvements
+
+- Used named parameters for calculateTags [#94](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/94) ([@manics](https://github.com/manics))
+
 ## Other merged PRs
 
 - Bump jest from 26.6.3 to 27.0.3 [#92](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/92) ([@dependabot](https://github.com/dependabot))
