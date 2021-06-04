@@ -1,3 +1,33 @@
+# v1.2.0
+
+([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v1.1.1...v1.2.0))
+
+## Enhancements made
+
+- Add branchRegex for validating/excluding branch names [#89](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/89) ([@manics](https://github.com/manics))
+
+## Other merged PRs
+
+- Bump jest from 26.6.3 to 27.0.3 [#92](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/92) ([@dependabot](https://github.com/dependabot))
+- Bump ws from 7.4.0 to 7.4.6 [#90](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/90) ([@dependabot](https://github.com/dependabot))
+- Bump eslint from 7.26.0 to 7.27.0 [#88](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/88) ([@dependabot](https://github.com/dependabot))
+- Explicitly use Ubuntu 20.04 and NodeJS 14 [#86](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/86) ([@manics](https://github.com/manics))
+- Bump @actions/github from 4.0.0 to 5.0.0 [#85](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/85) ([@dependabot](https://github.com/dependabot))
+- Bump hosted-git-info from 2.8.8 to 2.8.9 [#84](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/84) ([@dependabot](https://github.com/dependabot))
+- Bump lodash from 4.17.20 to 4.17.21 [#83](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/83) ([@dependabot](https://github.com/dependabot))
+- Bump eslint from 7.25.0 to 7.26.0 [#82](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/82) ([@dependabot](https://github.com/dependabot))
+- Bump prettier from 2.2.1 to 2.3.0 [#81](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/81) ([@dependabot](https://github.com/dependabot))
+- Bump stefanzweifel/git-auto-commit-action from be7095c202abcf573b09f20541e0ee2f6a3a9d9b to 4.11.0 [#80](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/80) ([@dependabot](https://github.com/dependabot))
+- Bump eslint from 7.24.0 to 7.25.0 [#77](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/77) ([@dependabot](https://github.com/dependabot))
+- Bump eslint-plugin-jest from 24.3.5 to 24.3.6 [#76](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/76) ([@dependabot](https://github.com/dependabot))
+- Set permissions.contents=write in workflows [#75](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/75) ([@manics](https://github.com/manics))
+
+## Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/action-major-minor-tag-calculator/graphs/contributors?from=2021-04-19&to=2021-06-04&type=c))
+
+[@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3AconsideRatio+updated%3A2021-04-19..2021-06-04&type=Issues) | [@dependabot](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Adependabot+updated%3A2021-04-19..2021-06-04&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Amanics+updated%3A2021-04-19..2021-06-04&type=Issues)
+
 ### v1.1.1
 
 ## Bugs fixed
