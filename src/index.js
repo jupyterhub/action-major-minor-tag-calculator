@@ -144,7 +144,7 @@ async function run() {
     const githubToken = core.getInput("githubToken");
     const prefix = core.getInput("prefix");
     const defaultTag = core.getInput("defaultTag");
-    const regexAllowed = core.getInput("regexAllowed");
+    const branchRegex = core.getInput("branchRegex");
 
     core.debug(JSON.stringify(github.context));
     const allTags = await calculateTags(
@@ -154,7 +154,7 @@ async function run() {
       github.context.payload.ref,
       prefix,
       defaultTag,
-      regexAllowed
+      branchRegex
     );
 
     core.info(allTags);
