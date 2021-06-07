@@ -28,6 +28,6 @@
     "eslint-plugin-jest": "^24.3.6",
     "jest": "^27.0.3",
     "nock": "^13.0.11",
-    "prettier": "^2.3.0"
+    "prettier": "^2.3.1"
   }
 }
