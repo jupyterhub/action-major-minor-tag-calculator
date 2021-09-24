@@ -67,11 +67,14 @@ async function calculateTags({
 
   const currentTag = ref.substring(10);
   core.debug(`currentTag: ${currentTag}`);
-  if (!semver.valid(currentTag)) {
+  if (!semver.valid(currentTag, { loose: true })) {
     throw new Error(`Invalid semver tag: ${currentTag}`);
   }
 
-  const current = semver.parse(currentTag, { includePrerelease: true });
+  const current = semver.parse(currentTag, {
+    includePrerelease: true,
+    loose: true,
+  });
   if (!supportedPrerelease(current.prerelease)) {
     core.warning(`Tag prerelease ${currentTag} is not supported`);
     return [`${prefix}${currentTag}`];
@@ -83,8 +86,8 @@ async function calculateTags({
     repo: repo,
   });
   const parsedTagrefs = tagrefs
-    .filter((a) => semver.valid(a.name))
-    .map((a) => semver.parse(a.name, { includePrerelease: true }));
+    .filter((a) => semver.valid(a.name, { loose: true }))
+    .map((a) => semver.parse(a.name, { includePrerelease: true, loose: true }));
 
   const tags = parsedTagrefs
     .filter((t) => supportedPrerelease(t.prerelease))
