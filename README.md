@@ -20,6 +20,7 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 | `1.2.3`          | `1.2.0`, `1.3.0` | `"[1.2.3, 1.2]"`                     |                                                                               |
 | `1.2.3`          | `1.2.0`, `1.2.5` | `"[1.2.3]"`                          |                                                                               |
 | `1.2.3-alpha.1`  | `1.2.0`          | `"[1.2.3-alpha.1]"`                  | A pre-release suffix on a version is treated like a branch                    |
+| `1.2.3a1`        | `1.2.0`          | `"[1.2.3a1]"`                        | A pre-release suffix (loose parsing) on a version is treated like a branch    |
 | `1.2.3-4`        | `1.2.0`, `1.2.3` | `"[1.2.3-4, 1.2.3, 1.2, 1, latest]"` | A build number suffix on a version is treated like the version but even newer |
 
 ## Recommended input parameters
