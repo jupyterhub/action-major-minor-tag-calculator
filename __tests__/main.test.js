@@ -214,6 +214,16 @@ test("Unsupported prerelease tag", async () => {
   expect(tags).toEqual(["2.0.0-rc1"]);
 });
 
+test("Unsupported prerelease tag, loose parsing", async () => {
+  const tags = await calculateTags({
+    token: "TOKEN",
+    owner: "owner",
+    repo: "repo",
+    ref: "refs/tags/2.0.0b1",
+  });
+  expect(tags).toEqual(["2.0.0b1"]);
+});
+
 test("Not a tag", async () => {
   await expect(
     calculateTags({
