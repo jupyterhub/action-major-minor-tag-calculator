@@ -42,7 +42,6 @@ previously would error and declare it as an invalid SemVer2 version.
 - Bump prettier from 2.3.0 to 2.3.1 [#97](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/97) ([@dependabot](https://github.com/dependabot))
 - Bump nock from 13.0.11 to 13.1.0 [#96](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/96) ([@dependabot](https://github.com/dependabot))
 - Bump eslint from 7.27.0 to 7.28.0 [#95](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/95) ([@dependabot](https://github.com/dependabot))
-- CHANGELOG 1.2.0 [#93](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/93) ([@manics](https://github.com/manics))
 - Bump Actions-R-Us/actions-tagger from 95c51c646e75db5c6b7d447e3087bcee58677341 to 2.0.2 [#69](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/69) ([@dependabot](https://github.com/dependabot))
 - Bump semver from 7.3.4 to 7.3.5 [#52](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/52) ([@dependabot](https://github.com/dependabot))
 
