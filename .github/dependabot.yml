@@ -39,5 +39,5 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    labels:
-      - dependencies
+      time: "05:00"
+      timezone: "Etc/UTC"
