@@ -20,7 +20,7 @@ jobs:
       - run: |
           npm run all
           git diff
-      - uses: stefanzweifel/git-auto-commit-action@6c32682a4040e023c054b2fc60a7cf65cc77f7ad
+      - uses: stefanzweifel/git-auto-commit-action@fd157da78fa13d9383e5580d1fd1184d89554b51
         with:
           commit_message: "[update-dist-bot] auto-format and update dist"
           commit_user_name: update-dist-bot
