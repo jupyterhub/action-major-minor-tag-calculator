@@ -33,7 +33,7 @@ outputs:
     description: A JSON formatted list of calculated tags.
 
 runs:
-  using: node12
+  using: node16
   main: dist/index.js
 
 branding:
