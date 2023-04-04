@@ -10,30 +10,16 @@
 #
 version: 2
 updates:
-  # npm production dependencies
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-    labels:
-      - maintenance
-      - dependencies
-    allow:
-      # To avoid PR noise, we only automate version bumps to the package.json's
-      # "dependencies", and ignore those in "devDependencies" on a weekly basis.
-      - dependency-type: production
-
-  # npm development dependencies
+  # npm dependencies
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: monthly
+      time: "05:00"
+      timezone: Etc/UTC
     labels:
+      - maintenance
       - dependencies
-    allow:
-      # To avoid PR noise, we automate version bumps to the package.json's
-      # "devDepenencies" on a monthly basis.
-      - dependency-type: production
 
   # Maintain dependencies in our GitHub Workflows
   - package-ecosystem: github-actions
