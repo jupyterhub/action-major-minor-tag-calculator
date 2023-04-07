@@ -1,0 +1,31 @@
+# dependabot.yaml reference: https://docs.github.com/en/code-security/supply-chain-security/keeping-your-dependencies-updated-automatically/configuration-options-for-dependency-updates
+#
+# Notes:
+# - Status and logs from dependabot are provided at
+#   https://github.com/jupyterhub/action-major-minor-tag-calculator/network/updates.
+# - YAML anchors are not supported here or in GitHub Workflows.
+# - We explicitly set the "maintenance" label on dependencies influencing the
+#   action to help our changelog generator tool github-activity to categorize
+#   PRs.
+#
+version: 2
+updates:
+  # npm dependencies
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+      time: "05:00"
+      timezone: Etc/UTC
+    labels:
+      - maintenance
+      - dependencies
+
+  # Maintain dependencies in our GitHub Workflows
+  - package-ecosystem: github-actions
+    directory: /
+    labels: [ci]
+    schedule:
+      interval: monthly
+      time: "05:00"
+      timezone: Etc/UTC
