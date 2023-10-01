@@ -12977,7 +12977,7 @@ async function calculateTags({
 
     // return without additional output tags if we got an outdated build number
     const similarTags = tags.filter(
-      (t) => t.prerelease.length && equalMajorMinorPatch(current, t)
+      (t) => t.prerelease.length && equalMajorMinorPatch(current, t),
     );
     if (similarTags.length && semver.compare(current, similarTags[0]) < 0) {
       return outputTags;
@@ -12985,7 +12985,7 @@ async function calculateTags({
   }
 
   outputTags.push(
-    `${prefix}${current.major}.${current.minor}.${current.patch}`
+    `${prefix}${current.major}.${current.minor}.${current.patch}`,
   );
 
   core.debug(semver.compare(current, tags[0]) >= 0);

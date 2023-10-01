@@ -231,7 +231,7 @@ test("Not a tag", async () => {
       owner: "owner",
       repo: "repo",
       ref: "something/else",
-    })
+    }),
   ).rejects.toEqual(new Error("Not a tag or branch: something/else"));
 });
 
@@ -242,7 +242,7 @@ test("Invalid semver tag", async () => {
       owner: "owner",
       repo: "repo",
       ref: "refs/tags/v1",
-    })
+    }),
   ).rejects.toEqual(new Error("Invalid semver tag: v1"));
 });
 
