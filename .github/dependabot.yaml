@@ -19,11 +19,10 @@ updates:
       timezone: Etc/UTC
     allow:
       - dependency-type: production
+      - dependency-type: development
     groups:
-      production-dependencies:
-        dependency-type: production
-      development-dependencies:
-        dependency-type: development
+      all-dependencies:
+        patterns: ["*"]
     labels:
       - maintenance
       - dependencies
