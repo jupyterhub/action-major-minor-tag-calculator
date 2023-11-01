@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "14"
+          node-version: "20"
       # Runs format, updates dist, runs tests
       - run: |
           npm run all
