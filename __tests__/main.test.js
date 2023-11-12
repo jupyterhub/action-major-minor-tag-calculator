@@ -1,16 +1,32 @@
 "use strict";
 
 const { calculateTags } = require("../src/index");
-const nock = require("nock");
+const { MockAgent, setGlobalDispatcher } = require("undici");
+let mockAgent;
+let tagInterceptor;
+
+beforeEach(() => {
+  mockAgent = new MockAgent({ connections: 1 });
+  mockAgent.disableNetConnect();
+  setGlobalDispatcher(mockAgent);
+  tagInterceptor = mockAgent
+    .get("https://api.github.com")
+    .intercept({ path: "/repos/owner/repo/tags" })
+    .defaultReplyHeaders({ "Content-Type": "application/json; charset=utf-8" });
+});
+
+afterEach(() => {
+  mockAgent.assertNoPendingInterceptors();
+  mockAgent.close();
+});
 
 test("No other tags", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "0.0.1",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "0.0.1",
+    },
+  ]);
+
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -18,20 +34,17 @@ test("No other tags", async () => {
     ref: "refs/tags/0.0.1",
   });
   expect(tags).toEqual(["0.0.1", "0.0", "0", "latest"]);
-  scope.done();
 });
 
 test("Is the latest tag", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.0",
-      },
-      {
-        name: "2.0.0",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.0.0",
+    },
+    {
+      name: "2.0.0",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -39,23 +52,20 @@ test("Is the latest tag", async () => {
     ref: "refs/tags/2.0.0",
   });
   expect(tags).toEqual(["2.0.0", "2.0", "2", "latest"]);
-  scope.done();
 });
 
 test("Not the latest major tag", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.23",
-      },
-      {
-        name: "2.0.0",
-      },
-      {
-        name: "1.1.0",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.0.23",
+    },
+    {
+      name: "2.0.0",
+    },
+    {
+      name: "1.1.0",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -63,26 +73,23 @@ test("Not the latest major tag", async () => {
     ref: "refs/tags/1.1.0",
   });
   expect(tags).toEqual(["1.1.0", "1.1", "1"]);
-  scope.done();
 });
 
 test("Not the latest minor tag", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.0",
-      },
-      {
-        name: "2.0.0",
-      },
-      {
-        name: "2.10.0",
-      },
-      {
-        name: "2.2.1",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.0.0",
+    },
+    {
+      name: "2.0.0",
+    },
+    {
+      name: "2.10.0",
+    },
+    {
+      name: "2.2.1",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -90,23 +97,20 @@ test("Not the latest minor tag", async () => {
     ref: "refs/tags/2.2.1",
   });
   expect(tags).toEqual(["2.2.1", "2.2"]);
-  scope.done();
 });
 
 test("Includes pre-releases", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.0",
-      },
-      {
-        name: "2.0.0-1",
-      },
-      {
-        name: "1.1.0-1",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.0.0",
+    },
+    {
+      name: "2.0.0-1",
+    },
+    {
+      name: "1.1.0-1",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -114,20 +118,17 @@ test("Includes pre-releases", async () => {
     ref: "refs/tags/1.1.0-2",
   });
   expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1"]);
-  scope.done();
 });
 
 test("Includes pre-releases jump one", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.0",
-      },
-      {
-        name: "1.1.0-1",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.0.0",
+    },
+    {
+      name: "1.1.0-1",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -135,17 +136,14 @@ test("Includes pre-releases jump one", async () => {
     ref: "refs/tags/1.1.0-2",
   });
   expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1", "latest"]);
-  scope.done();
 });
 
 test("Includes pre-releases no jump", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.1.0",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.1.0",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -153,23 +151,20 @@ test("Includes pre-releases no jump", async () => {
     ref: "refs/tags/1.1.0-1",
   });
   expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1", "latest"]);
-  scope.done();
 });
 
 test("Handling of an outdated build number", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.0",
-      },
-      {
-        name: "2.0.0-2",
-      },
-      {
-        name: "1.1.0-2",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.0.0",
+    },
+    {
+      name: "2.0.0-2",
+    },
+    {
+      name: "1.1.0-2",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -177,23 +172,20 @@ test("Handling of an outdated build number", async () => {
     ref: "refs/tags/1.1.0-1",
   });
   expect(tags).toEqual(["1.1.0-1"]);
-  scope.done();
 });
 
 test("Handling build number comparisons numerically", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.0",
-      },
-      {
-        name: "2.0.0-2",
-      },
-      {
-        name: "1.1.0-2",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.0.0",
+    },
+    {
+      name: "2.0.0-2",
+    },
+    {
+      name: "1.1.0-2",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -201,7 +193,6 @@ test("Handling build number comparisons numerically", async () => {
     ref: "refs/tags/1.1.0-10",
   });
   expect(tags).toEqual(["1.1.0-10", "1.1.0", "1.1", "1"]);
-  scope.done();
 });
 
 test("Unsupported prerelease tag", async () => {
@@ -268,13 +259,11 @@ test("No ref use default", async () => {
 });
 
 test("Prefix", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "0.0.1",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "0.0.1",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -288,7 +277,6 @@ test("Prefix", async () => {
     "prefix:0",
     "prefix:latest",
   ]);
-  scope.done();
 });
 
 test("Branch", async () => {
@@ -326,19 +314,17 @@ test("Branch doesn't match regex with default", async () => {
 });
 
 test("Includes pre-releases one", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.0",
-      },
-      {
-        name: "1.1.0",
-      },
-      {
-        name: "1.1.0-0",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.0.0",
+    },
+    {
+      name: "1.1.0",
+    },
+    {
+      name: "1.1.0-0",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -346,26 +332,23 @@ test("Includes pre-releases one", async () => {
     ref: "refs/tags/1.1.0-1",
   });
   expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1", "latest"]);
-  scope.done();
 });
 
 test("Includes pre-releases one with new tag", async () => {
-  const scope = nock("https://api.github.com")
-    .get("/repos/owner/repo/tags")
-    .reply(200, [
-      {
-        name: "1.0.0",
-      },
-      {
-        name: "1.1.0",
-      },
-      {
-        name: "2.0.0",
-      },
-      {
-        name: "1.1.0-0",
-      },
-    ]);
+  tagInterceptor.reply(200, [
+    {
+      name: "1.0.0",
+    },
+    {
+      name: "1.1.0",
+    },
+    {
+      name: "2.0.0",
+    },
+    {
+      name: "1.1.0-0",
+    },
+  ]);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -373,5 +356,4 @@ test("Includes pre-releases one with new tag", async () => {
     ref: "refs/tags/1.1.0-1",
   });
   expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1"]);
-  scope.done();
 });
