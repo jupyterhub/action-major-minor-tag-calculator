@@ -128,7 +128,10 @@ async function calculateTags({
   }
 
   outputTags.push(
-    ...expandPrefix(prefix, `${current.major}.${current.minor}.${current.patch}`),
+    ...expandPrefix(
+      prefix,
+      `${current.major}.${current.minor}.${current.patch}`,
+    ),
   );
 
   core.debug(semver.compare(current, tags[0]) >= 0);

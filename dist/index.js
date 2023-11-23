@@ -33873,9 +33873,13 @@ function checkAgainstRegex(name, regexAllowed) {
 
 function expandPrefix(prefix, tag) {
   // Adds one or more prefixes to a tag, where prefix could be a single prefix
-  // or a whitespace or comma separated list of prefixes.
+  // or a comma/whitespace separated list of prefixes.
+  if (!prefix) {
+    return [tag];
+  }
+
   let rv = [];
-  let prefixes = prefix.split(/ |,/);
+  let prefixes = prefix.split(/\s|,/).filter(Boolean);
   prefixes.forEach((p) => rv.push(`${p}${tag}`));
   return rv;
 }
@@ -33970,7 +33974,10 @@ async function calculateTags({
   }
 
   outputTags.push(
-    `${prefix}${current.major}.${current.minor}.${current.patch}`,
+    ...expandPrefix(
+      prefix,
+      `${current.major}.${current.minor}.${current.patch}`,
+    ),
   );
 
   core.debug(semver.compare(current, tags[0]) >= 0);
