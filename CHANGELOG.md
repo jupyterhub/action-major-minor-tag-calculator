@@ -1,6 +1,6 @@
 ## v3
 
-### v3.0.0 - 2023-11-21
+### v3.0.0 - 2023-11-23
 
 ([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v2.0.0...v3.0.0))
 
