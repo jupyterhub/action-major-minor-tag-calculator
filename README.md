@@ -29,7 +29,7 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 
 ## Optional input parameters
 
-- `prefix`: A string that each returned tag should be prefixed with, for example to tag a Docker container set this to `user/repository:`.
+- `prefix`: A string that each returned tag should be prefixed with, for example to tag a Docker container set this to `user/repository:`. This is allowed to be a comma/whitespace separated list to tag multiple images, for example `user/repository:,quay.io/user/repository:`.
 - `defaultTag`: If the tag output would be empty return this tag instead.
   This can be useful for running a workflow in pull requests where no suitable git references are present.
   `prefix` is _not_ automatically added.

@@ -258,7 +258,7 @@ test("No ref use default", async () => {
   expect(tags).toEqual(["default-tag"]);
 });
 
-test("Prefix", async () => {
+test("Single prefix", async () => {
   tagInterceptor.reply(200, [
     {
       name: "0.0.1",
@@ -276,6 +276,36 @@ test("Prefix", async () => {
     "prefix:0.0",
     "prefix:0",
     "prefix:latest",
+  ]);
+});
+
+test("Multiple prefix", async () => {
+  tagInterceptor.reply(200, [
+    {
+      name: "0.0.1",
+    },
+  ]);
+  const tags = await calculateTags({
+    token: "TOKEN",
+    owner: "owner",
+    repo: "repo",
+    ref: "refs/tags/0.0.1",
+    // test use of different whitespace separators and a combination of both
+    prefix: "prefix1:\tprefix2:\n, prefix3:",
+  });
+  expect(tags).toEqual([
+    "prefix1:0.0.1",
+    "prefix2:0.0.1",
+    "prefix3:0.0.1",
+    "prefix1:0.0",
+    "prefix2:0.0",
+    "prefix3:0.0",
+    "prefix1:0",
+    "prefix2:0",
+    "prefix3:0",
+    "prefix1:latest",
+    "prefix2:latest",
+    "prefix3:latest",
   ]);
 });
 
