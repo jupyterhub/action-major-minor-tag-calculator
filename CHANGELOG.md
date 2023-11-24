@@ -1,5 +1,22 @@
 ## v3
 
+### v3.1.0 - 2023-11-24
+
+([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v3.0.0...v3.1.0))
+
+### Enhancements made
+
+- Allow prefix to be a whitespace/comma separated list of prefixes [#326](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/326) ([@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
+
+### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/action-major-minor-tag-calculator/graphs/contributors?from=2023-11-23&to=2023-11-24&type=c))
+
+@consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3AconsideRatio+updated%3A2023-11-23..2023-11-24&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Amanics+updated%3A2023-11-23..2023-11-24&type=Issues))
+
 ### v3.0.0 - 2023-11-23
 
 ([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v2.0.0...v3.0.0))
