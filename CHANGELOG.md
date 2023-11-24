@@ -4,11 +4,11 @@
 
 ([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v3.0.0...v3.1.0))
 
-### Enhancements made
+#### Enhancements made
 
 - Allow prefix to be a whitespace/comma separated list of prefixes [#326](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/326) ([@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
 
-### Contributors to this release
+#### Contributors to this release
 
 The following people contributed discussions, new ideas, code and documentation contributions, and review.
 See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
