@@ -33871,6 +33871,19 @@ function checkAgainstRegex(name, regexAllowed) {
   return re.test(name);
 }
 
+function expandPrefix(prefix, tag) {
+  // Adds one or more prefixes to a tag, where prefix could be a single prefix
+  // or a comma/whitespace separated list of prefixes.
+  if (!prefix) {
+    return [tag];
+  }
+
+  let rv = [];
+  let prefixes = prefix.split(/\s|,/).filter(Boolean);
+  prefixes.forEach((p) => rv.push(`${p}${tag}`));
+  return rv;
+}
+
 async function calculateTags({
   token,
   owner,
@@ -33905,7 +33918,7 @@ async function calculateTags({
       }
       return [];
     }
-    return [`${prefix}${branch}`];
+    return expandPrefix(prefix, branch);
   }
   if (!ref.startsWith("refs/tags/")) {
     throw new Error(`Not a tag or branch: ${ref}`);
@@ -33923,7 +33936,7 @@ async function calculateTags({
   });
   if (!supportedPrerelease(current.prerelease)) {
     core.warning(`Tag prerelease ${currentTag} is not supported`);
-    return [`${prefix}${currentTag}`];
+    return expandPrefix(prefix, currentTag);
   }
 
   const octokit = github.getOctokit(token);
@@ -33949,7 +33962,7 @@ async function calculateTags({
 
   let outputTags = [];
   if (current.prerelease.length) {
-    outputTags.push(`${prefix}${current.version}`);
+    outputTags.push(...expandPrefix(prefix, current.version));
 
     // return without additional output tags if we got an outdated build number
     const similarTags = tags.filter(
@@ -33961,7 +33974,10 @@ async function calculateTags({
   }
 
   outputTags.push(
-    `${prefix}${current.major}.${current.minor}.${current.patch}`,
+    ...expandPrefix(
+      prefix,
+      `${current.major}.${current.minor}.${current.patch}`,
+    ),
   );
 
   core.debug(semver.compare(current, tags[0]) >= 0);
@@ -33969,18 +33985,24 @@ async function calculateTags({
     !tags.length ||
     semver.compare(current.toString().split("-")[0], tags[0]) >= 0
   ) {
-    outputTags.push(`${prefix}${current.major}.${current.minor}`);
-    outputTags.push(`${prefix}${current.major}`);
-    outputTags.push(`${prefix}latest`);
+    outputTags.push(
+      ...expandPrefix(prefix, `${current.major}.${current.minor}`),
+    );
+    outputTags.push(...expandPrefix(prefix, `${current.major}`));
+    outputTags.push(...expandPrefix(prefix, "latest"));
   } else if (
     semver.compare(current.toString().split("-")[0], majorTags[0]) >= 0
   ) {
-    outputTags.push(`${prefix}${current.major}.${current.minor}`);
-    outputTags.push(`${prefix}${current.major}`);
+    outputTags.push(
+      ...expandPrefix(prefix, `${current.major}.${current.minor}`),
+    );
+    outputTags.push(...expandPrefix(prefix, `${current.major}`));
   } else if (
     semver.compare(current.toString().split("-")[0], minorTags[0]) >= 0
   ) {
-    outputTags.push(`${prefix}${current.major}.${current.minor}`);
+    outputTags.push(
+      ...expandPrefix(prefix, `${current.major}.${current.minor}`),
+    );
   }
   core.debug(`outputTags: ${outputTags}`);
   return outputTags;
