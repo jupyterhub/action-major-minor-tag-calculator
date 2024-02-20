@@ -28,12 +28,12 @@ function checkAgainstRegex(name, regexAllowed) {
 function expandPrefixSuffix(prefix, suffix, tag) {
   // Adds all permutations of prefixes and suffixes to a tag, where
   // prefix/suffix could be a single prefix/suffix or a comma/whitespace
-  // separated list of prefixes/suffixes. If <empty-string> is observed, its
+  // separated list of prefixes/suffixes. If "" is observed, its
   // replaced with an empty string.
   let prefixes = [...new Set(prefix.split(/[\s,]/).filter(Boolean))];
   let suffixes = [...new Set(suffix.split(/[\s,]/).filter(Boolean))];
-  prefixes = prefixes.map((p) => p.replaceAll(/<empty-string>/g, ""));
-  suffixes = suffixes.map((p) => p.replaceAll(/<empty-string>/g, ""));
+  prefixes = prefixes.map((p) => p.replaceAll(/""/g, ""));
+  suffixes = suffixes.map((p) => p.replaceAll(/""/g, ""));
 
   // the permutation logic requires at least one element in each list
   if (prefixes.length == 0) {

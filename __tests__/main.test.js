@@ -376,9 +376,9 @@ test("Multiple prefix and suffix with empty string", async () => {
     owner: "owner",
     repo: "repo",
     ref: "refs/tags/0.0.1",
-    // test use of <empty-string>
-    prefix: "<empty-string>,prefix2:",
-    suffix: "<empty-string>,-b",
+    // test use of ""
+    prefix: '"",prefix2:',
+    suffix: '"",-b',
   });
   expect(tags).toEqual([
     "0.0.1",
