@@ -26,7 +26,7 @@ function checkAgainstRegex(name, regexAllowed) {
 }
 
 function expandPrefixSuffix(prefix, suffix, tag) {
-  // Adds all permutations of prefixes and suffixes to a tag, where
+  // Adds all combinations of prefixes and suffixes to a tag, where
   // prefix/suffix could be a single prefix/suffix or a comma/whitespace
   // separated list of prefixes/suffixes. If "" is observed, its
   // replaced with an empty string.
@@ -35,14 +35,13 @@ function expandPrefixSuffix(prefix, suffix, tag) {
   prefixes = prefixes.map((p) => p.replaceAll(/""/g, ""));
   suffixes = suffixes.map((p) => p.replaceAll(/""/g, ""));
 
-  // the permutation logic requires at least one element in each list
+  // the combination logic requires at least one element in each list
   if (prefixes.length == 0) {
     prefixes.push("");
   }
   if (suffixes.length == 0) {
     suffixes.push("");
   }
-  // permute
   return prefixes.flatMap((p) => suffixes.map((s) => `${p}${tag}${s}`));
 }
 

@@ -14,25 +14,25 @@ inputs:
   prefix:
     required: false
     description: |-
-      One or more whitespace or comma deliminated prefixes for returned tags.
+      One or more whitespace or comma delimited prefixes for returned tags.
 
       As an example, prefix could be set to `ghcr.io/a/b: quay.io/a/b:` to
       provide image names with tags for two separate repositories.
 
       The string `""` can be used to represent an empty string, and
-      all permutations of prefixes and suffixes are considered.
+      all combinations of prefixes and suffixes are used.
     default: ""
   suffix:
     required: false
     description: |-
-      One or more whitespace or comma deliminated suffixes for returned tags.
+      One or more whitespace or comma delimited suffixes for returned tags.
 
       As an example, suffix could be set to `"" -debian` to provide
       a default image variant without suffix next to an image variant referred
       to with a -debian suffix.
 
       The string `""` can be used to represent an empty string, and
-      all permutations of prefixes and suffixes are considered.
+      all combinations of prefixes and suffixes are used.
     default: ""
   defaultTag:
     required: false
