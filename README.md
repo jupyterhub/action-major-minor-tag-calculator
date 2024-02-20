@@ -36,6 +36,7 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 
   The string `""` can be used to represent an empty string, and all combinations
   of prefixes and suffixes are used.
+
 - `suffix`: One or more whitespace or comma delimited suffixes for returned
   tags.
 
@@ -45,6 +46,7 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 
   The string `""` can be used to represent an empty string, and all combinations
   of prefixes and suffixes are used.
+
 - `defaultTag`: If the tag output would be empty return this tag instead.
   This can be useful for running a workflow in pull requests where no suitable git references are present.
   `prefix` or `suffix` are _not_ automatically added.
