@@ -29,10 +29,27 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 
 ## Optional input parameters
 
-- `prefix`: A string that each returned tag should be prefixed with, for example to tag a Docker container set this to `user/repository:`. This is allowed to be a comma/whitespace separated list to tag multiple images, for example `user/repository:,quay.io/user/repository:`.
+- `prefix`: One or more whitespace or comma delimited prefixes for returned tags.
+
+  As an example, prefix could be set to `ghcr.io/a/b: quay.io/a/b:` to provide
+  image names with tags for two separate repositories.
+
+  The string `""` can be used to represent an empty string, and all combinations
+  of prefixes and suffixes are used.
+
+- `suffix`: One or more whitespace or comma delimited suffixes for returned
+  tags.
+
+  As an example, suffix could be set to `"" -debian` to provide a default image
+  variant without suffix next to an image variant referred to with a -debian
+  suffix.
+
+  The string `""` can be used to represent an empty string, and all combinations
+  of prefixes and suffixes are used.
+
 - `defaultTag`: If the tag output would be empty return this tag instead.
   This can be useful for running a workflow in pull requests where no suitable git references are present.
-  `prefix` is _not_ automatically added.
+  `prefix` or `suffix` are _not_ automatically added.
 - `branchRegex`: If a branch name does not match this regex return `defaultTag` or empty instead.
 
 ## Output parameters

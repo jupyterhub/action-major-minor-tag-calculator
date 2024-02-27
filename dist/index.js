@@ -34325,17 +34325,24 @@ function checkAgainstRegex(name, regexAllowed) {
   return re.test(name);
 }
 
-function expandPrefix(prefix, tag) {
-  // Adds one or more prefixes to a tag, where prefix could be a single prefix
-  // or a comma/whitespace separated list of prefixes.
-  if (!prefix) {
-    return [tag];
-  }
+function expandPrefixSuffix(prefix, suffix, tag) {
+  // Adds all combinations of prefixes and suffixes to a tag, where
+  // prefix/suffix could be a single prefix/suffix or a comma/whitespace
+  // separated list of prefixes/suffixes. If "" is observed, its
+  // replaced with an empty string.
+  let prefixes = [...new Set(prefix.split(/[\s,]/).filter(Boolean))];
+  let suffixes = [...new Set(suffix.split(/[\s,]/).filter(Boolean))];
+  prefixes = prefixes.map((p) => p.replaceAll(/""/g, ""));
+  suffixes = suffixes.map((p) => p.replaceAll(/""/g, ""));
 
-  let rv = [];
-  let prefixes = prefix.split(/\s|,/).filter(Boolean);
-  prefixes.forEach((p) => rv.push(`${p}${tag}`));
-  return rv;
+  // the combination logic requires at least one element in each list
+  if (prefixes.length == 0) {
+    prefixes.push("");
+  }
+  if (suffixes.length == 0) {
+    suffixes.push("");
+  }
+  return prefixes.flatMap((p) => suffixes.map((s) => `${p}${tag}${s}`));
 }
 
 async function calculateTags({
@@ -34344,6 +34351,7 @@ async function calculateTags({
   repo,
   ref,
   prefix = "",
+  suffix = "",
   defaultTag = "",
   regexAllowed = "",
 }) {
@@ -34372,7 +34380,7 @@ async function calculateTags({
       }
       return [];
     }
-    return expandPrefix(prefix, branch);
+    return expandPrefixSuffix(prefix, suffix, branch);
   }
   if (!ref.startsWith("refs/tags/")) {
     throw new Error(`Not a tag or branch: ${ref}`);
@@ -34390,7 +34398,7 @@ async function calculateTags({
   });
   if (!supportedPrerelease(current.prerelease)) {
     core.warning(`Tag prerelease ${currentTag} is not supported`);
-    return expandPrefix(prefix, currentTag);
+    return expandPrefixSuffix(prefix, suffix, currentTag);
   }
 
   const octokit = github.getOctokit(token);
@@ -34416,7 +34424,7 @@ async function calculateTags({
 
   let outputTags = [];
   if (current.prerelease.length) {
-    outputTags.push(...expandPrefix(prefix, current.version));
+    outputTags.push(...expandPrefixSuffix(prefix, suffix, current.version));
 
     // return without additional output tags if we got an outdated build number
     const similarTags = tags.filter(
@@ -34428,8 +34436,9 @@ async function calculateTags({
   }
 
   outputTags.push(
-    ...expandPrefix(
+    ...expandPrefixSuffix(
       prefix,
+      suffix,
       `${current.major}.${current.minor}.${current.patch}`,
     ),
   );
@@ -34440,22 +34449,34 @@ async function calculateTags({
     semver.compare(current.toString().split("-")[0], tags[0]) >= 0
   ) {
     outputTags.push(
-      ...expandPrefix(prefix, `${current.major}.${current.minor}`),
+      ...expandPrefixSuffix(
+        prefix,
+        suffix,
+        `${current.major}.${current.minor}`,
+      ),
     );
-    outputTags.push(...expandPrefix(prefix, `${current.major}`));
-    outputTags.push(...expandPrefix(prefix, "latest"));
+    outputTags.push(...expandPrefixSuffix(prefix, suffix, `${current.major}`));
+    outputTags.push(...expandPrefixSuffix(prefix, suffix, "latest"));
   } else if (
     semver.compare(current.toString().split("-")[0], majorTags[0]) >= 0
   ) {
     outputTags.push(
-      ...expandPrefix(prefix, `${current.major}.${current.minor}`),
+      ...expandPrefixSuffix(
+        prefix,
+        suffix,
+        `${current.major}.${current.minor}`,
+      ),
     );
-    outputTags.push(...expandPrefix(prefix, `${current.major}`));
+    outputTags.push(...expandPrefixSuffix(prefix, suffix, `${current.major}`));
   } else if (
     semver.compare(current.toString().split("-")[0], minorTags[0]) >= 0
   ) {
     outputTags.push(
-      ...expandPrefix(prefix, `${current.major}.${current.minor}`),
+      ...expandPrefixSuffix(
+        prefix,
+        suffix,
+        `${current.major}.${current.minor}`,
+      ),
     );
   }
   core.debug(`outputTags: ${outputTags}`);
@@ -34468,6 +34489,7 @@ async function run() {
     // githubToken: ${{ secrets.GITHUB_TOKEN }}
     const githubToken = core.getInput("githubToken");
     const prefix = core.getInput("prefix");
+    const suffix = core.getInput("suffix");
     const defaultTag = core.getInput("defaultTag");
     const branchRegex = core.getInput("branchRegex");
 
@@ -34478,6 +34500,7 @@ async function run() {
       repo: github.context.payload.repository.name,
       ref: github.context.payload.ref,
       prefix: prefix,
+      suffix: suffix,
       defaultTag: defaultTag,
       regexAllowed: branchRegex,
     });
