@@ -71,15 +71,15 @@ on:
 
 jobs:
   push-images-to-dockerhub:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       # https://github.com/jupyterhub/action-major-minor-tag-calculator
       - name: Get all relevant tags
         id: gettags
-        uses: jupyterhub/action-major-minor-tag-calculator@v1
+        uses: jupyterhub/action-major-minor-tag-calculator@v3
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "my-username/my-image-name:"
@@ -87,14 +87,14 @@ jobs:
 
       # https://github.com/docker/login-action
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
       # https://github.com/docker/build-push-action
       - name: Build, tag, and push images
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           push: true
           # The tags expression below could with a git reference triggering
