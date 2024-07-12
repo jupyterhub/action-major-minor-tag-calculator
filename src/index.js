@@ -3,7 +3,6 @@
 
 const core = require("@actions/core");
 const github = require("@actions/github");
-const { env } = require("process");
 const semver = require("semver");
 
 function supportedPrerelease(pre) {
