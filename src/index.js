@@ -158,7 +158,6 @@ async function calculateTagsFromList({
     ),
   );
 
-  core.debug(semver.compare(current, tags[0]) >= 0);
   if (
     !tags.length ||
     semver.compare(current.toString().split("-")[0], tags[0]) >= 0
@@ -173,6 +172,7 @@ async function calculateTagsFromList({
     outputTags.push(...expandPrefixSuffix(prefix, suffix, `${current.major}`));
     outputTags.push(...expandPrefixSuffix(prefix, suffix, "latest"));
   } else if (
+    !majorTags.length ||
     semver.compare(current.toString().split("-")[0], majorTags[0]) >= 0
   ) {
     outputTags.push(
@@ -184,6 +184,7 @@ async function calculateTagsFromList({
     );
     outputTags.push(...expandPrefixSuffix(prefix, suffix, `${current.major}`));
   } else if (
+    !minorTags.length ||
     semver.compare(current.toString().split("-")[0], minorTags[0]) >= 0
   ) {
     outputTags.push(
