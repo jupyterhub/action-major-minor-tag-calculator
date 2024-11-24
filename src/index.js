@@ -91,6 +91,27 @@ async function calculateTags({
     throw new Error(`Invalid semver tag: ${currentTag}`);
   }
 
+  const octokit = github.getOctokit(token);
+  const tagrefs = await octokit.paginate(octokit.rest.repos.listTags, {
+    owner: owner,
+    repo: repo,
+  });
+  const tagList = tagrefs.map((a) => a.name);
+  const outputTags = calculateTagsFromList({
+    currentTag,
+    tagList,
+    prefix,
+    suffix,
+  });
+  return outputTags;
+}
+
+async function calculateTagsFromList({
+  currentTag,
+  tagList,
+  prefix = "",
+  suffix = "",
+}) {
   const current = semver.parse(currentTag, {
     includePrerelease: true,
     loose: true,
@@ -100,14 +121,9 @@ async function calculateTags({
     return expandPrefixSuffix(prefix, suffix, currentTag);
   }
 
-  const octokit = github.getOctokit(token);
-  const tagrefs = await octokit.paginate(octokit.rest.repos.listTags, {
-    owner: owner,
-    repo: repo,
-  });
-  const parsedTagrefs = tagrefs
-    .filter((a) => semver.valid(a.name, { loose: true }))
-    .map((a) => semver.parse(a.name, { includePrerelease: true, loose: true }));
+  const parsedTagrefs = tagList
+    .filter((a) => semver.valid(a, { loose: true }))
+    .map((a) => semver.parse(a, { includePrerelease: true, loose: true }));
 
   const tags = parsedTagrefs
     .filter((t) => supportedPrerelease(t.prerelease))
@@ -187,22 +203,40 @@ async function run() {
     // The workflow must set githubToken to the GitHub Secret Token
     // githubToken: ${{ secrets.GITHUB_TOKEN }}
     const githubToken = core.getInput("githubToken");
+    const tagListInput = core.getInput("tagList");
+    const currentTag = core.getInput("currentTag");
     const prefix = core.getInput("prefix");
     const suffix = core.getInput("suffix");
     const defaultTag = core.getInput("defaultTag");
     const branchRegex = core.getInput("branchRegex");
 
     core.debug(JSON.stringify(github.context));
-    const allTags = await calculateTags({
-      token: githubToken,
-      owner: github.context.payload.repository.owner.login,
-      repo: github.context.payload.repository.name,
-      ref: github.context.payload.ref,
-      prefix: prefix,
-      suffix: suffix,
-      defaultTag: defaultTag,
-      regexAllowed: branchRegex,
-    });
+
+    if ((tagListInput && !currentTag) || (!tagListInput && currentTag)) {
+      throw new Error("tagList and currentTag must be provided together");
+    }
+
+    let allTags;
+    if (tagListInput && currentTag) {
+      allTags = await calculateTagsFromList({
+        currentTag: currentTag,
+        // tagList can be the empty list
+        tagList: JSON.parse(tagListInput),
+        prefix: prefix,
+        suffix: suffix,
+      });
+    } else {
+      allTags = await calculateTags({
+        token: githubToken,
+        owner: github.context.payload.repository.owner.login,
+        repo: github.context.payload.repository.name,
+        ref: github.context.payload.ref,
+        prefix: prefix,
+        suffix: suffix,
+        defaultTag: defaultTag,
+        regexAllowed: branchRegex,
+      });
+    }
 
     core.info(allTags);
     core.setOutput("tags", allTags);
@@ -217,3 +251,4 @@ if (!module.parent) {
 }
 
 exports.calculateTags = calculateTags;
+exports.calculateTagsFromList = calculateTagsFromList;
