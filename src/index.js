@@ -252,3 +252,5 @@ if (!module.parent) {
 
 exports.calculateTags = calculateTags;
 exports.calculateTagsFromList = calculateTagsFromList;
+// run is exported so it can be tested
+exports.testExports = { run };
