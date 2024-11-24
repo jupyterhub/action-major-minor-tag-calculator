@@ -2,7 +2,11 @@
 ---
 author: Simon Li
 name: major-minor-tag-calculator
-description: Calculate major and minor semver tags, e.g. for tagging containers
+description: |-
+  Calculate major and minor semver tags, e.g. for tagging containers.
+  The default is for the action to fetch and parse git tags.
+  Alternatively you can provide the list of existing tags and the new tag,
+  and this action will calculate the output tags without looking at Git.
 
 # Manually keep the input-, and output- descriptions in sync with the readme!
 inputs:
@@ -10,6 +14,17 @@ inputs:
     required: false
     description: |-
       The GitHub token, required so this action can fetch tags using the GitHub API. If this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
+      Omit this if tagList and currentTag are provided.
+    default: ""
+  tagList:
+    required: false
+    description: |-
+      List of existing tags as a JSON array, provide this if you aren't processing Git tags
+    default: ""
+  currentTag:
+    required: false
+    description: |-
+      The current tag, provide this if you aren't processing Git tags
     default: ""
   prefix:
     required: false

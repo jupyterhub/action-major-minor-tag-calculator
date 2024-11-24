@@ -25,7 +25,15 @@ The GitHub action's only output is named `tags` and is a JSON formatted list. Se
 
 ## Recommended input parameters
 
+By default this action works with Git tags. It will fetch tags from the current repository, and if this action is triggered by a tag push it will autodetect the current tag.
+
 - `githubToken`: The GitHub token, required so this action can fetch tags using the GitHub API. If this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
+
+You can use this action with non-Git tags by explicitly providing the list of existing tags, and the current (new) tag.
+In this case you should omit `githubToken` as no GitHub API calls are required.
+
+- `tagList`: List of existing tags as a JSON array, provide this if you aren't processing Git tags, e.g. `["1.2.3-0", "1.2.3-1"]`
+- `currentTag`: The current (new) tag, e.g. `"1.2.4-0"`
 
 ## Optional input parameters
 

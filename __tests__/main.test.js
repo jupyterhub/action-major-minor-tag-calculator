@@ -1,6 +1,6 @@
 "use strict";
 
-const { calculateTags } = require("../src/index");
+const { calculateTags, calculateTagsFromList } = require("../src/index");
 const { MockAgent, setGlobalDispatcher } = require("undici");
 let mockAgent;
 let tagInterceptor;
@@ -196,6 +196,7 @@ test("Handling build number comparisons numerically", async () => {
 });
 
 test("Unsupported prerelease tag", async () => {
+  tagInterceptor.reply(200, []);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -206,6 +207,7 @@ test("Unsupported prerelease tag", async () => {
 });
 
 test("Unsupported prerelease tag, loose parsing", async () => {
+  tagInterceptor.reply(200, []);
   const tags = await calculateTags({
     token: "TOKEN",
     owner: "owner",
@@ -477,4 +479,23 @@ test("Includes pre-releases one with new tag", async () => {
     ref: "refs/tags/1.1.0-1",
   });
   expect(tags).toEqual(["1.1.0-1", "1.1.0", "1.1", "1"]);
+});
+
+test("Externally provided tags", async () => {
+  const tags = await calculateTagsFromList({
+    currentTag: "4.1.2-10",
+    tagList: [
+      "other",
+      "3.1.2",
+      "4.0.0",
+      "4.1.2",
+      "4.1.2-9",
+      "4.1.2-10invalid",
+      "4.1.2-10-invalid",
+      "4.2.0-0",
+      "5.2.2",
+      "5.2.2-2",
+    ],
+  });
+  expect(tags).toEqual(["4.1.2-10", "4.1.2", "4.1"]);
 });
