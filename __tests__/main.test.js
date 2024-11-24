@@ -1,7 +1,15 @@
 "use strict";
 
-const { calculateTags, calculateTagsFromList } = require("../src/index");
+const {
+  calculateTags,
+  calculateTagsFromList,
+  testExports,
+} = require("../src/index");
 const { MockAgent, setGlobalDispatcher } = require("undici");
+
+const core = require("@actions/core");
+jest.mock("@actions/core");
+
 let mockAgent;
 let tagInterceptor;
 
@@ -18,6 +26,7 @@ beforeEach(() => {
 afterEach(() => {
   mockAgent.assertNoPendingInterceptors();
   mockAgent.close();
+  jest.restoreAllMocks();
 });
 
 test("No other tags", async () => {
@@ -498,4 +507,55 @@ test("Externally provided tags", async () => {
     ],
   });
   expect(tags).toEqual(["4.1.2-10", "4.1.2", "4.1"]);
+});
+
+describe("main", () => {
+  const mockInputs = {
+    githubToken: "",
+    tagList: "[]",
+    currentTag: "1.2.3",
+    prefix: "",
+    suffix: "",
+    defaultTag: "",
+    branchRegex: "",
+  };
+
+  it("run with provided tags existing", async () => {
+    core.debug.mockImplementation(console.debug);
+    core.info.mockImplementation(console.debug);
+    const setOutput = jest.spyOn(core, "setOutput");
+    const setFailed = jest.spyOn(core, "setFailed");
+
+    core.getInput.mockImplementation((a) => {
+      return { ...mockInputs, tagList: '["asd", "2.0.0-0"]' }[a];
+    });
+
+    await testExports.run();
+
+    console.log(setFailed.mock.calls);
+    expect(setFailed).toHaveBeenCalledTimes(0);
+    expect(setOutput).toHaveBeenCalledTimes(1);
+
+    const output0 = setOutput.mock.calls[0];
+    expect(output0).toEqual(["tags", ["1.2.3", "1.2", "1"]]);
+  });
+
+  it("run with provided tags empty", async () => {
+    core.debug.mockImplementation(console.debug);
+    core.info.mockImplementation(console.debug);
+    const setOutput = jest.spyOn(core, "setOutput");
+    const setFailed = jest.spyOn(core, "setFailed");
+
+    core.getInput.mockImplementation((a) => {
+      return mockInputs[a];
+    });
+
+    await testExports.run();
+
+    expect(setFailed).toHaveBeenCalledTimes(0);
+    expect(setOutput).toHaveBeenCalledTimes(1);
+
+    const output0 = setOutput.mock.calls[0];
+    expect(output0).toEqual(["tags", ["1.2.3", "1.2", "1", "latest"]]);
+  });
 });
