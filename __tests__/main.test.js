@@ -36,13 +36,15 @@ test("No other tags", async () => {
     },
   ]);
 
-  const tags = await calculateTags({
+  const { tags, currentTag, tagList } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: "refs/tags/0.0.1",
   });
   expect(tags).toEqual(["0.0.1", "0.0", "0", "latest"]);
+  expect(currentTag).toEqual("0.0.1");
+  expect(tagList).toEqual(["0.0.1"]);
 });
 
 test("Is the latest tag", async () => {
@@ -54,7 +56,7 @@ test("Is the latest tag", async () => {
       name: "2.0.0",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -75,7 +77,7 @@ test("Not the latest major tag", async () => {
       name: "1.1.0",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -99,7 +101,7 @@ test("Not the latest minor tag", async () => {
       name: "2.2.1",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -120,13 +122,15 @@ test("Includes pre-releases", async () => {
       name: "1.1.0-1",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags, currentTag, tagList } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: "refs/tags/1.1.0-2",
   });
   expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1"]);
+  expect(currentTag).toEqual("1.1.0-2");
+  expect(tagList).toEqual(["1.0.0", "2.0.0-1", "1.1.0-1"]);
 });
 
 test("Includes pre-releases jump one", async () => {
@@ -138,7 +142,7 @@ test("Includes pre-releases jump one", async () => {
       name: "1.1.0-1",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -153,7 +157,7 @@ test("Includes pre-releases no jump", async () => {
       name: "1.1.0",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -174,7 +178,7 @@ test("Handling of an outdated build number", async () => {
       name: "1.1.0-2",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -195,7 +199,7 @@ test("Handling build number comparisons numerically", async () => {
       name: "1.1.0-2",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -206,18 +210,20 @@ test("Handling build number comparisons numerically", async () => {
 
 test("Unsupported prerelease tag", async () => {
   tagInterceptor.reply(200, []);
-  const tags = await calculateTags({
+  const { tags, currentTag, tagList } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: "refs/tags/2.0.0-rc1",
   });
   expect(tags).toEqual(["2.0.0-rc1"]);
+  expect(currentTag).toEqual("2.0.0-rc1");
+  expect(tagList).toEqual([]);
 });
 
 test("Unsupported prerelease tag, loose parsing", async () => {
   tagInterceptor.reply(200, []);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -249,17 +255,19 @@ test("Invalid semver tag", async () => {
 });
 
 test("No ref", async () => {
-  const tags = await calculateTags({
+  const { tags, currentTag, tagList } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: null,
   });
   expect(tags).toEqual([]);
+  expect(currentTag).toEqual(null);
+  expect(tagList).toEqual(null);
 });
 
 test("No ref use default", async () => {
-  const tags = await calculateTags({
+  const { tags, currentTag, tagList } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -267,6 +275,8 @@ test("No ref use default", async () => {
     defaultTag: "default-tag",
   });
   expect(tags).toEqual(["default-tag"]);
+  expect(currentTag).toEqual(null);
+  expect(tagList).toEqual(null);
 });
 
 test("Single prefix", async () => {
@@ -275,7 +285,7 @@ test("Single prefix", async () => {
       name: "0.0.1",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -296,7 +306,7 @@ test("Multiple prefix", async () => {
       name: "0.0.1",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -326,7 +336,7 @@ test("Single suffix", async () => {
       name: "0.0.1",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -347,7 +357,7 @@ test("Multiple prefix and suffix", async () => {
       name: "0.0.1",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -382,7 +392,7 @@ test("Multiple prefix and suffix with empty string", async () => {
       name: "0.0.1",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -412,17 +422,19 @@ test("Multiple prefix and suffix with empty string", async () => {
 });
 
 test("Branch", async () => {
-  const tags = await calculateTags({
+  const { tags, currentTag, tagList } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: "refs/heads/main",
   });
   expect(tags).toEqual(["main"]);
+  expect(currentTag).toEqual(null);
+  expect(tagList).toEqual(null);
 });
 
 test("Branch doesn't match regex", async () => {
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -433,7 +445,7 @@ test("Branch doesn't match regex", async () => {
 });
 
 test("Branch doesn't match regex with default", async () => {
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -457,7 +469,7 @@ test("Includes pre-releases one", async () => {
       name: "1.1.0-0",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -481,7 +493,7 @@ test("Includes pre-releases one with new tag", async () => {
       name: "1.1.0-0",
     },
   ]);
-  const tags = await calculateTags({
+  const { tags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -534,10 +546,11 @@ describe("main", () => {
 
     console.log(setFailed.mock.calls);
     expect(setFailed).toHaveBeenCalledTimes(0);
-    expect(setOutput).toHaveBeenCalledTimes(1);
+    expect(setOutput).toHaveBeenCalledTimes(3);
 
-    const output0 = setOutput.mock.calls[0];
-    expect(output0).toEqual(["tags", ["1.2.3", "1.2", "1"]]);
+    expect(setOutput.mock.calls[0]).toEqual(["tags", ["1.2.3", "1.2", "1"]]);
+    expect(setOutput.mock.calls[1]).toEqual(["currentTag", "1.2.3"]);
+    expect(setOutput.mock.calls[2]).toEqual(["tagList", ["asd", "2.0.0-0"]]);
   });
 
   it("run with provided tags empty", async () => {
@@ -553,9 +566,13 @@ describe("main", () => {
     await testExports.run();
 
     expect(setFailed).toHaveBeenCalledTimes(0);
-    expect(setOutput).toHaveBeenCalledTimes(1);
+    expect(setOutput).toHaveBeenCalledTimes(3);
 
-    const output0 = setOutput.mock.calls[0];
-    expect(output0).toEqual(["tags", ["1.2.3", "1.2", "1", "latest"]]);
+    expect(setOutput.mock.calls[0]).toEqual([
+      "tags",
+      ["1.2.3", "1.2", "1", "latest"],
+    ]);
+    expect(setOutput.mock.calls[1]).toEqual(["currentTag", "1.2.3"]);
+    expect(setOutput.mock.calls[2]).toEqual(["tagList", []]);
   });
 });

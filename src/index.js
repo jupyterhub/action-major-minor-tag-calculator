@@ -63,23 +63,26 @@ async function calculateTags({
   //
   core.debug(`ref: ${ref}`);
 
+  const r = { tags: [], currentTag: null, tagList: null };
+
   if (!ref) {
     core.debug("No ref");
     if (defaultTag) {
-      return [defaultTag];
+      return { ...r, tags: [defaultTag] };
     }
-    return [];
+    return r;
   }
   if (ref.startsWith("refs/heads/")) {
     const branch = ref.substring(11);
     core.debug(`Branch: ${branch}`);
     if (!checkAgainstRegex(branch, regexAllowed)) {
       if (defaultTag) {
-        return [defaultTag];
+        return { ...r, tags: [defaultTag] };
       }
-      return [];
+      return r;
     }
-    return expandPrefixSuffix(prefix, suffix, branch);
+    const tags = expandPrefixSuffix(prefix, suffix, branch);
+    return { ...r, tags };
   }
   if (!ref.startsWith("refs/tags/")) {
     throw new Error(`Not a tag or branch: ${ref}`);
@@ -97,13 +100,13 @@ async function calculateTags({
     repo: repo,
   });
   const tagList = tagrefs.map((a) => a.name);
-  const outputTags = calculateTagsFromList({
+  const outputTags = await calculateTagsFromList({
     currentTag,
     tagList,
     prefix,
     suffix,
   });
-  return outputTags;
+  return { tags: outputTags, currentTag, tagList };
 }
 
 async function calculateTagsFromList({
@@ -205,7 +208,7 @@ async function run() {
     // githubToken: ${{ secrets.GITHUB_TOKEN }}
     const githubToken = core.getInput("githubToken");
     const tagListInput = core.getInput("tagList");
-    const currentTag = core.getInput("currentTag");
+    const currentTagInput = core.getInput("currentTag");
     const prefix = core.getInput("prefix");
     const suffix = core.getInput("suffix");
     const defaultTag = core.getInput("defaultTag");
@@ -213,21 +216,30 @@ async function run() {
 
     core.debug(JSON.stringify(github.context));
 
-    if ((tagListInput && !currentTag) || (!tagListInput && currentTag)) {
+    if (
+      (tagListInput && !currentTagInput) ||
+      (!tagListInput && currentTagInput)
+    ) {
       throw new Error("tagList and currentTag must be provided together");
     }
 
-    let allTags;
-    if (tagListInput && currentTag) {
+    let allTags, tagList, currentTag;
+    if (tagListInput && currentTagInput) {
+      tagList = JSON.parse(tagListInput);
+      currentTag = currentTagInput;
       allTags = await calculateTagsFromList({
         currentTag: currentTag,
         // tagList can be the empty list
-        tagList: JSON.parse(tagListInput),
+        tagList: tagList,
         prefix: prefix,
         suffix: suffix,
       });
     } else {
-      allTags = await calculateTags({
+      ({
+        tags: allTags,
+        currentTag,
+        tagList,
+      } = await calculateTags({
         token: githubToken,
         owner: github.context.payload.repository.owner.login,
         repo: github.context.payload.repository.name,
@@ -236,11 +248,13 @@ async function run() {
         suffix: suffix,
         defaultTag: defaultTag,
         regexAllowed: branchRegex,
-      });
+      }));
     }
 
     core.info(allTags);
     core.setOutput("tags", allTags);
+    core.setOutput("currentTag", currentTag);
+    core.setOutput("tagList", tagList);
   } catch (error) {
     core.setFailed(error.message);
   }
