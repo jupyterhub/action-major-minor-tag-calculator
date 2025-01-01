@@ -32432,14 +32432,8 @@ module.exports.cacheStores = {
   MemoryCacheStore: __nccwpck_require__(4889)
 }
 
-try {
-  const SqliteCacheStore = __nccwpck_require__(1522)
-  module.exports.cacheStores.SqliteCacheStore = SqliteCacheStore
-} catch (err) {
-  if (err.code !== 'ERR_UNKNOWN_BUILTIN_MODULE') {
-    throw err
-  }
-}
+const SqliteCacheStore = __nccwpck_require__(1522)
+module.exports.cacheStores.SqliteCacheStore = SqliteCacheStore
 
 module.exports.buildConnector = buildConnector
 module.exports.errors = errors
@@ -34328,9 +34322,10 @@ module.exports = MemoryCacheStore
 "use strict";
 
 
-const { DatabaseSync } = __nccwpck_require__(99)
 const { Writable } = __nccwpck_require__(2203)
 const { assertCacheKey, assertCacheValue } = __nccwpck_require__(7659)
+
+let DatabaseSync
 
 const VERSION = 3
 
@@ -34429,6 +34424,9 @@ module.exports = class SqliteCacheStore {
       }
     }
 
+    if (!DatabaseSync) {
+      DatabaseSync = (__nccwpck_require__(99).DatabaseSync)
+    }
     this.#db = new DatabaseSync(opts?.location ?? ':memory:')
 
     this.#db.exec(`
@@ -39191,13 +39189,11 @@ const {
   kClosed,
   kBodyTimeout
 } = __nccwpck_require__(6443)
+const { channels } = __nccwpck_require__(2414)
 
 const kOpenStreams = Symbol('open streams')
 
 let extractBody
-
-// Experimental
-let h2ExperimentalWarned = false
 
 /** @type {import('http2')} */
 let http2
@@ -39242,13 +39238,6 @@ function parseH2Headers (headers) {
 
 async function connectH2 (client, socket) {
   client[kSocket] = socket
-
-  if (!h2ExperimentalWarned) {
-    h2ExperimentalWarned = true
-    process.emitWarning('H2 support is experimental, expect them to change at any time.', {
-      code: 'UNDICI-H2'
-    })
-  }
 
   const session = http2.connect(client[kUrl], {
     createConnection: () => socket,
@@ -39618,6 +39607,14 @@ function writeH2 (client, request) {
   }
 
   session.ref()
+
+  if (channels.sendHeaders.hasSubscribers) {
+    let header = ''
+    for (const key in headers) {
+      header += `${key}: ${headers[key]}\r\n`
+    }
+    channels.sendHeaders.publish({ request, headers: header, socket: session[kSocket] })
+  }
 
   // TODO(metcoder95): add support for sending trailers
   const shouldEndStream = method === 'GET' || method === 'HEAD' || body === null
@@ -41772,8 +41769,16 @@ const {
   parseVaryHeader,
   isEtagUsable
 } = __nccwpck_require__(7659)
+const { parseHttpDate } = __nccwpck_require__(5453)
 
 function noop () {}
+
+// Status codes that we can use some heuristics on to cache
+const HEURISTICALLY_CACHEABLE_STATUS_CODES = [
+  200, 203, 204, 206, 300, 301, 308, 404, 405, 410, 414, 501
+]
+
+const MAX_RESPONSE_AGE = 2147483647000
 
 /**
  * @typedef {import('../../types/dispatcher.d.ts').default.DispatchHandler} DispatchHandler
@@ -41834,17 +41839,23 @@ class CacheHandler {
     this.#handler.onRequestUpgrade?.(controller, statusCode, headers, socket)
   }
 
+  /**
+   * @param {import('../../types/dispatcher.d.ts').default.DispatchController} controller
+   * @param {number} statusCode
+   * @param {import('../../types/header.d.ts').IncomingHttpHeaders} resHeaders
+   * @param {string} statusMessage
+   */
   onResponseStart (
     controller,
     statusCode,
-    headers,
+    resHeaders,
     statusMessage
   ) {
     const downstreamOnHeaders = () =>
       this.#handler.onResponseStart?.(
         controller,
         statusCode,
-        headers,
+        resHeaders,
         statusMessage
       )
 
@@ -41853,97 +41864,113 @@ class CacheHandler {
       statusCode >= 200 &&
       statusCode <= 399
     ) {
-      // https://www.rfc-editor.org/rfc/rfc9111.html#name-invalidating-stored-response
+      // Successful response to an unsafe method, delete it from cache
+      //  https://www.rfc-editor.org/rfc/rfc9111.html#name-invalidating-stored-response
       try {
-        this.#store.delete(this.#cacheKey).catch?.(noop)
+        this.#store.delete(this.#cacheKey)?.catch?.(noop)
       } catch {
         // Fail silently
       }
       return downstreamOnHeaders()
     }
 
-    const cacheControlHeader = headers['cache-control']
-    if (!cacheControlHeader && !headers['expires'] && !this.#cacheByDefault) {
-      // Don't have the cache control header or the cache is full
+    const cacheControlHeader = resHeaders['cache-control']
+    const heuristicallyCacheable = resHeaders['last-modified'] && HEURISTICALLY_CACHEABLE_STATUS_CODES.includes(statusCode)
+    if (
+      !cacheControlHeader &&
+      !resHeaders['expires'] &&
+      !heuristicallyCacheable &&
+      !this.#cacheByDefault
+    ) {
+      // Don't have anything to tell us this response is cachable and we're not
+      //  caching by default
       return downstreamOnHeaders()
     }
 
     const cacheControlDirectives = cacheControlHeader ? parseCacheControlHeader(cacheControlHeader) : {}
-    if (!canCacheResponse(this.#cacheType, statusCode, headers, cacheControlDirectives)) {
+    if (!canCacheResponse(this.#cacheType, statusCode, resHeaders, cacheControlDirectives)) {
       return downstreamOnHeaders()
     }
 
-    const age = getAge(headers)
-
     const now = Date.now()
-    const staleAt = determineStaleAt(this.#cacheType, now, headers, cacheControlDirectives) ?? this.#cacheByDefault
-    if (staleAt) {
-      let baseTime = now
-      if (headers['date']) {
-        const parsedDate = parseInt(headers['date'])
-        const date = new Date(isNaN(parsedDate) ? headers['date'] : parsedDate)
-        if (date instanceof Date && !isNaN(date)) {
-          baseTime = date.getTime()
-        }
-      }
+    const resAge = resHeaders.age ? getAge(resHeaders.age) : undefined
+    if (resAge && resAge >= MAX_RESPONSE_AGE) {
+      // Response considered stale
+      return downstreamOnHeaders()
+    }
 
-      const absoluteStaleAt = staleAt + baseTime
+    const resDate = typeof resHeaders.date === 'string'
+      ? parseHttpDate(resHeaders.date)
+      : undefined
 
-      if (now >= absoluteStaleAt || (age && age >= staleAt)) {
-        // Response is already stale
+    const staleAt =
+      determineStaleAt(this.#cacheType, now, resAge, resHeaders, resDate, cacheControlDirectives) ??
+      this.#cacheByDefault
+    if (staleAt === undefined || (resAge && resAge > staleAt)) {
+      return downstreamOnHeaders()
+    }
+
+    const baseTime = resDate ? resDate.getTime() : now
+    const absoluteStaleAt = staleAt + baseTime
+    if (now >= absoluteStaleAt) {
+      // Response is already stale
+      return downstreamOnHeaders()
+    }
+
+    let varyDirectives
+    if (this.#cacheKey.headers && resHeaders.vary) {
+      varyDirectives = parseVaryHeader(resHeaders.vary, this.#cacheKey.headers)
+      if (!varyDirectives) {
+        // Parse error
         return downstreamOnHeaders()
       }
-
-      let varyDirectives
-      if (this.#cacheKey.headers && headers.vary) {
-        varyDirectives = parseVaryHeader(headers.vary, this.#cacheKey.headers)
-        if (!varyDirectives) {
-          // Parse error
-          return downstreamOnHeaders()
-        }
-      }
-
-      const deleteAt = determineDeleteAt(cacheControlDirectives, absoluteStaleAt)
-      const strippedHeaders = stripNecessaryHeaders(headers, cacheControlDirectives)
-
-      /**
-       * @type {import('../../types/cache-interceptor.d.ts').default.CacheValue}
-       */
-      const value = {
-        statusCode,
-        statusMessage,
-        headers: strippedHeaders,
-        vary: varyDirectives,
-        cacheControlDirectives,
-        cachedAt: age ? now - (age * 1000) : now,
-        staleAt: absoluteStaleAt,
-        deleteAt
-      }
-
-      if (typeof headers.etag === 'string' && isEtagUsable(headers.etag)) {
-        value.etag = headers.etag
-      }
-
-      this.#writeStream = this.#store.createWriteStream(this.#cacheKey, value)
-
-      if (this.#writeStream) {
-        const handler = this
-        this.#writeStream
-          .on('drain', () => controller.resume())
-          .on('error', function () {
-            // TODO (fix): Make error somehow observable?
-            handler.#writeStream = undefined
-          })
-          .on('close', function () {
-            if (handler.#writeStream === this) {
-              handler.#writeStream = undefined
-            }
-
-            // TODO (fix): Should we resume even if was paused downstream?
-            controller.resume()
-          })
-      }
     }
+
+    const deleteAt = determineDeleteAt(baseTime, cacheControlDirectives, absoluteStaleAt)
+    const strippedHeaders = stripNecessaryHeaders(resHeaders, cacheControlDirectives)
+
+    /**
+     * @type {import('../../types/cache-interceptor.d.ts').default.CacheValue}
+     */
+    const value = {
+      statusCode,
+      statusMessage,
+      headers: strippedHeaders,
+      vary: varyDirectives,
+      cacheControlDirectives,
+      cachedAt: resAge ? now - resAge : now,
+      staleAt: absoluteStaleAt,
+      deleteAt
+    }
+
+    if (typeof resHeaders.etag === 'string' && isEtagUsable(resHeaders.etag)) {
+      value.etag = resHeaders.etag
+    }
+
+    this.#writeStream = this.#store.createWriteStream(this.#cacheKey, value)
+    if (!this.#writeStream) {
+      return downstreamOnHeaders()
+    }
+
+    const handler = this
+    this.#writeStream
+      .on('drain', () => controller.resume())
+      .on('error', function () {
+        // TODO (fix): Make error somehow observable?
+        handler.#writeStream = undefined
+
+        // Delete the value in case the cache store is holding onto state from
+        //  the call to createWriteStream
+        handler.#store.delete(handler.#cacheKey)
+      })
+      .on('close', function () {
+        if (handler.#writeStream === this) {
+          handler.#writeStream = undefined
+        }
+
+        // TODO (fix): Should we resume even if was paused downstream?
+        controller.resume()
+      })
 
     return downstreamOnHeaders()
   }
@@ -41973,18 +42000,15 @@ class CacheHandler {
  *
  * @param {import('../../types/cache-interceptor.d.ts').default.CacheOptions['type']} cacheType
  * @param {number} statusCode
- * @param {Record<string, string | string[]>} headers
+ * @param {import('../../types/header.d.ts').IncomingHttpHeaders} resHeaders
  * @param {import('../../types/cache-interceptor.d.ts').default.CacheControlDirectives} cacheControlDirectives
  */
-function canCacheResponse (cacheType, statusCode, headers, cacheControlDirectives) {
+function canCacheResponse (cacheType, statusCode, resHeaders, cacheControlDirectives) {
   if (statusCode !== 200 && statusCode !== 307) {
     return false
   }
 
-  if (
-    cacheControlDirectives['no-cache'] === true ||
-    cacheControlDirectives['no-store']
-  ) {
+  if (cacheControlDirectives['no-store']) {
     return false
   }
 
@@ -41993,13 +42017,13 @@ function canCacheResponse (cacheType, statusCode, headers, cacheControlDirective
   }
 
   // https://www.rfc-editor.org/rfc/rfc9111.html#section-4.1-5
-  if (headers.vary?.includes('*')) {
+  if (resHeaders.vary?.includes('*')) {
     return false
   }
 
   // https://www.rfc-editor.org/rfc/rfc9111.html#name-storing-responses-to-authen
-  if (headers.authorization) {
-    if (!cacheControlDirectives.public || typeof headers.authorization !== 'string') {
+  if (resHeaders.authorization) {
+    if (!cacheControlDirectives.public || typeof resHeaders.authorization !== 'string') {
       return false
     }
 
@@ -42022,55 +42046,74 @@ function canCacheResponse (cacheType, statusCode, headers, cacheControlDirective
 }
 
 /**
- * @param {Record<string, string | string[]>} headers
+ * @param {string | string[]} ageHeader
  * @returns {number | undefined}
  */
-function getAge (headers) {
-  if (!headers.age) {
-    return undefined
-  }
+function getAge (ageHeader) {
+  const age = parseInt(Array.isArray(ageHeader) ? ageHeader[0] : ageHeader)
 
-  const age = parseInt(Array.isArray(headers.age) ? headers.age[0] : headers.age)
-  if (isNaN(age) || age >= 2147483647) {
-    return undefined
-  }
-
-  return age
+  return isNaN(age) ? undefined : age * 1000
 }
 
 /**
  * @param {import('../../types/cache-interceptor.d.ts').default.CacheOptions['type']} cacheType
  * @param {number} now
- * @param {Record<string, string | string[]>} headers
+ * @param {number | undefined} age
+ * @param {import('../../types/header.d.ts').IncomingHttpHeaders} resHeaders
+ * @param {Date | undefined} responseDate
  * @param {import('../../types/cache-interceptor.d.ts').default.CacheControlDirectives} cacheControlDirectives
  *
- * @returns {number | undefined} time that the value is stale at or undefined if it shouldn't be cached
+ * @returns {number | undefined} time that the value is stale at in seconds or undefined if it shouldn't be cached
  */
-function determineStaleAt (cacheType, now, headers, cacheControlDirectives) {
+function determineStaleAt (cacheType, now, age, resHeaders, responseDate, cacheControlDirectives) {
   if (cacheType === 'shared') {
     // Prioritize s-maxage since we're a shared cache
     //  s-maxage > max-age > Expire
     //  https://www.rfc-editor.org/rfc/rfc9111.html#section-5.2.2.10-3
     const sMaxAge = cacheControlDirectives['s-maxage']
-    if (sMaxAge) {
-      return sMaxAge * 1000
+    if (sMaxAge !== undefined) {
+      return sMaxAge > 0 ? sMaxAge * 1000 : undefined
     }
   }
 
   const maxAge = cacheControlDirectives['max-age']
-  if (maxAge) {
-    return maxAge * 1000
+  if (maxAge !== undefined) {
+    return maxAge > 0 ? maxAge * 1000 : undefined
   }
 
-  if (headers.expires && typeof headers.expires === 'string') {
+  if (typeof resHeaders.expires === 'string') {
     // https://www.rfc-editor.org/rfc/rfc9111.html#section-5.3
-    const expiresDate = new Date(headers.expires)
-    if (expiresDate instanceof Date && Number.isFinite(expiresDate.valueOf())) {
+    const expiresDate = parseHttpDate(resHeaders.expires)
+    if (expiresDate) {
       if (now >= expiresDate.getTime()) {
         return undefined
       }
 
+      if (responseDate) {
+        if (responseDate >= expiresDate) {
+          return undefined
+        }
+
+        if (age !== undefined && age > (expiresDate - responseDate)) {
+          return undefined
+        }
+      }
+
       return expiresDate.getTime() - now
+    }
+  }
+
+  if (typeof resHeaders['last-modified'] === 'string') {
+    // https://www.rfc-editor.org/rfc/rfc9111.html#name-calculating-heuristic-fresh
+    const lastModified = new Date(resHeaders['last-modified'])
+    if (isValidDate(lastModified)) {
+      if (lastModified.getTime() >= now) {
+        return undefined
+      }
+
+      const responseAge = now - lastModified.getTime()
+
+      return responseAge * 0.1
     }
   }
 
@@ -42083,10 +42126,11 @@ function determineStaleAt (cacheType, now, headers, cacheControlDirectives) {
 }
 
 /**
+ * @param {number} now
  * @param {import('../../types/cache-interceptor.d.ts').default.CacheControlDirectives} cacheControlDirectives
  * @param {number} staleAt
  */
-function determineDeleteAt (cacheControlDirectives, staleAt) {
+function determineDeleteAt (now, cacheControlDirectives, staleAt) {
   let staleWhileRevalidate = -Infinity
   let staleIfError = -Infinity
   let immutable = -Infinity
@@ -42100,7 +42144,7 @@ function determineDeleteAt (cacheControlDirectives, staleAt) {
   }
 
   if (staleWhileRevalidate === -Infinity && staleIfError === -Infinity) {
-    immutable = 31536000
+    immutable = now + 31536000000
   }
 
   return Math.max(staleAt, staleWhileRevalidate, staleIfError, immutable)
@@ -42108,11 +42152,11 @@ function determineDeleteAt (cacheControlDirectives, staleAt) {
 
 /**
  * Strips headers required to be removed in cached responses
- * @param {Record<string, string | string[]>} headers
+ * @param {import('../../types/header.d.ts').IncomingHttpHeaders} resHeaders
  * @param {import('../../types/cache-interceptor.d.ts').default.CacheControlDirectives} cacheControlDirectives
  * @returns {Record<string, string | string []>}
  */
-function stripNecessaryHeaders (headers, cacheControlDirectives) {
+function stripNecessaryHeaders (resHeaders, cacheControlDirectives) {
   const headersToRemove = [
     'connection',
     'proxy-authenticate',
@@ -42126,14 +42170,14 @@ function stripNecessaryHeaders (headers, cacheControlDirectives) {
     'age'
   ]
 
-  if (headers['connection']) {
-    if (Array.isArray(headers['connection'])) {
+  if (resHeaders['connection']) {
+    if (Array.isArray(resHeaders['connection'])) {
       // connection: a
       // connection: b
-      headersToRemove.push(...headers['connection'].map(header => header.trim()))
+      headersToRemove.push(...resHeaders['connection'].map(header => header.trim()))
     } else {
       // connection: a, b
-      headersToRemove.push(...headers['connection'].split(',').map(header => header.trim()))
+      headersToRemove.push(...resHeaders['connection'].split(',').map(header => header.trim()))
     }
   }
 
@@ -42147,13 +42191,21 @@ function stripNecessaryHeaders (headers, cacheControlDirectives) {
 
   let strippedHeaders
   for (const headerName of headersToRemove) {
-    if (headers[headerName]) {
-      strippedHeaders ??= { ...headers }
+    if (resHeaders[headerName]) {
+      strippedHeaders ??= { ...resHeaders }
       delete strippedHeaders[headerName]
     }
   }
 
-  return strippedHeaders ?? headers
+  return strippedHeaders ?? resHeaders
+}
+
+/**
+ * @param {Date} date
+ * @returns {boolean}
+ */
+function isValidDate (date) {
+  return date instanceof Date && Number.isFinite(date.valueOf())
 }
 
 module.exports = CacheHandler
@@ -42300,6 +42352,7 @@ module.exports = CacheRevalidationHandler
 
 
 const assert = __nccwpck_require__(4589)
+const WrapHandler = __nccwpck_require__(9510)
 
 /**
  * @deprecated
@@ -42308,65 +42361,60 @@ module.exports = class DecoratorHandler {
   #handler
   #onCompleteCalled = false
   #onErrorCalled = false
+  #onResponseStartCalled = false
 
   constructor (handler) {
     if (typeof handler !== 'object' || handler === null) {
       throw new TypeError('handler must be an object')
     }
-    this.#handler = handler
+    this.#handler = WrapHandler.wrap(handler)
   }
 
-  onConnect (...args) {
-    return this.#handler.onConnect?.(...args)
+  onRequestStart (...args) {
+    this.#handler.onRequestStart?.(...args)
   }
 
-  onError (...args) {
-    this.#onErrorCalled = true
-    return this.#handler.onError?.(...args)
-  }
-
-  onUpgrade (...args) {
+  onRequestUpgrade (...args) {
     assert(!this.#onCompleteCalled)
     assert(!this.#onErrorCalled)
 
-    return this.#handler.onUpgrade?.(...args)
+    return this.#handler.onRequestUpgrade?.(...args)
   }
 
-  onResponseStarted (...args) {
+  onResponseStart (...args) {
+    assert(!this.#onCompleteCalled)
+    assert(!this.#onErrorCalled)
+    assert(!this.#onResponseStartCalled)
+
+    this.#onResponseStartCalled = true
+
+    return this.#handler.onResponseStart?.(...args)
+  }
+
+  onResponseData (...args) {
     assert(!this.#onCompleteCalled)
     assert(!this.#onErrorCalled)
 
-    return this.#handler.onResponseStarted?.(...args)
+    return this.#handler.onResponseData?.(...args)
   }
 
-  onHeaders (...args) {
-    assert(!this.#onCompleteCalled)
-    assert(!this.#onErrorCalled)
-
-    return this.#handler.onHeaders?.(...args)
-  }
-
-  onData (...args) {
-    assert(!this.#onCompleteCalled)
-    assert(!this.#onErrorCalled)
-
-    return this.#handler.onData?.(...args)
-  }
-
-  onComplete (...args) {
+  onResponseEnd (...args) {
     assert(!this.#onCompleteCalled)
     assert(!this.#onErrorCalled)
 
     this.#onCompleteCalled = true
-    return this.#handler.onComplete?.(...args)
+    return this.#handler.onResponseEnd?.(...args)
   }
 
-  onBodySent (...args) {
-    assert(!this.#onCompleteCalled)
-    assert(!this.#onErrorCalled)
-
-    return this.#handler.onBodySent?.(...args)
+  onResponseError (...args) {
+    this.#onErrorCalled = true
+    return this.#handler.onResponseError?.(...args)
   }
+
+  /**
+   * @deprecated
+   */
+  onBodySent () {}
 }
 
 
@@ -43120,8 +43168,7 @@ module.exports = class WrapHandler {
   onRequestUpgrade (controller, statusCode, headers, socket) {
     const rawHeaders = []
     for (const [key, val] of Object.entries(headers)) {
-      // TODO (fix): What if val is Array
-      rawHeaders.push(Buffer.from(key), Buffer.from(val))
+      rawHeaders.push(Buffer.from(key), Array.isArray(val) ? val.map(v => Buffer.from(v)) : Buffer.from(val))
     }
 
     this.#handler.onUpgrade?.(statusCode, rawHeaders, socket)
@@ -43130,8 +43177,7 @@ module.exports = class WrapHandler {
   onResponseStart (controller, statusCode, headers, statusMessage) {
     const rawHeaders = []
     for (const [key, val] of Object.entries(headers)) {
-      // TODO (fix): What if val is Array
-      rawHeaders.push(Buffer.from(key), Buffer.from(val))
+      rawHeaders.push(Buffer.from(key), Array.isArray(val) ? val.map(v => Buffer.from(v)) : Buffer.from(val))
     }
 
     if (this.#handler.onHeaders?.(statusCode, rawHeaders, () => controller.resume(), statusMessage) === false) {
@@ -43148,8 +43194,7 @@ module.exports = class WrapHandler {
   onResponseEnd (controller, trailers) {
     const rawTrailers = []
     for (const [key, val] of Object.entries(trailers)) {
-      // TODO (fix): What if val is Array
-      rawTrailers.push(Buffer.from(key), Buffer.from(val))
+      rawTrailers.push(Buffer.from(key), Array.isArray(val) ? val.map(v => Buffer.from(v)) : Buffer.from(val))
     }
 
     this.#handler.onComplete?.(rawTrailers)
@@ -43276,10 +43321,14 @@ function handleUncachedResponse (
 }
 
 /**
+ * @param {import('../../types/dispatcher.d.ts').default.DispatchHandler} handler
+ * @param {import('../../types/dispatcher.d.ts').default.RequestOptions} opts
  * @param {import('../../types/cache-interceptor.d.ts').default.GetResult} result
  * @param {number} age
+ * @param {any} context
+ * @param {boolean} isStale
  */
-function sendCachedValue (handler, opts, result, age, context) {
+function sendCachedValue (handler, opts, result, age, context, isStale) {
   // TODO (perf): Readable.from path can be optimized...
   const stream = util.isStream(result.body)
     ? result.body
@@ -43333,8 +43382,13 @@ function sendCachedValue (handler, opts, result, age, context) {
 
   // Add the age header
   // https://www.rfc-editor.org/rfc/rfc9111.html#name-age
-  // TODO (fix): What if headers.age already exists?
-  const headers = age != null ? { ...result.headers, age: String(age) } : result.headers
+  const headers = { ...result.headers, age: String(age) }
+
+  if (isStale) {
+    // Add warning header
+    //  https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Warning
+    headers.warning = '110 - "response is stale"'
+  }
 
   handler.onResponseStart?.(controller, result.statusCode, headers, result.statusMessage)
 
@@ -43398,8 +43452,11 @@ function handleResult (
 
     let headers = {
       ...opts.headers,
-      'if-modified-since': new Date(result.cachedAt).toUTCString(),
-      'if-none-match': result.etag
+      'if-modified-since': new Date(result.cachedAt).toUTCString()
+    }
+
+    if (result.etag) {
+      headers['if-none-match'] = result.etag
     }
 
     if (result.vary) {
@@ -43418,7 +43475,7 @@ function handleResult (
       new CacheRevalidationHandler(
         (success, context) => {
           if (success) {
-            sendCachedValue(handler, opts, result, age, context)
+            sendCachedValue(handler, opts, result, age, context, true)
           } else if (util.isStream(result.body)) {
             result.body.on('error', () => {}).destroy()
           }
@@ -43434,7 +43491,7 @@ function handleResult (
     opts.body.on('error', () => {}).destroy()
   }
 
-  sendCachedValue(handler, opts, result, age, null)
+  sendCachedValue(handler, opts, result, age, null, false)
 }
 
 /**
@@ -43744,6 +43801,10 @@ class DNSInstance {
     this.#records.set(origin.hostname, records)
   }
 
+  deleteRecords (origin) {
+    this.#records.delete(origin.hostname)
+  }
+
   getHandler (meta, opts) {
     return new DNSDispatchHandler(this, meta, opts)
   }
@@ -43753,19 +43814,18 @@ class DNSDispatchHandler extends DecoratorHandler {
   #state = null
   #opts = null
   #dispatch = null
-  #handler = null
   #origin = null
+  #controller = null
 
   constructor (state, { origin, handler, dispatch }, opts) {
     super(handler)
     this.#origin = origin
-    this.#handler = handler
     this.#opts = { ...opts }
     this.#state = state
     this.#dispatch = dispatch
   }
 
-  onError (err) {
+  onResponseError (controller, err) {
     switch (err.code) {
       case 'ETIMEDOUT':
       case 'ECONNREFUSED': {
@@ -43773,7 +43833,8 @@ class DNSDispatchHandler extends DecoratorHandler {
           // We delete the record and retry
           this.#state.runLookup(this.#origin, this.#opts, (err, newOrigin) => {
             if (err) {
-              return this.#handler.onError(err)
+              super.onResponseError(controller, err)
+              return
             }
 
             const dispatchOpts = {
@@ -43784,18 +43845,18 @@ class DNSDispatchHandler extends DecoratorHandler {
             this.#dispatch(dispatchOpts, this)
           })
 
-          // if dual-stack disabled, we error out
           return
         }
 
-        this.#handler.onError(err)
-        return
+        // if dual-stack disabled, we error out
+        super.onResponseError(controller, err)
+        break
       }
       case 'ENOTFOUND':
-        this.#state.deleteRecord(this.#origin)
+        this.#state.deleteRecords(this.#origin)
       // eslint-disable-next-line no-fallthrough
       default:
-        this.#handler.onError(err)
+        super.onResponseError(controller, err)
         break
     }
   }
@@ -43889,7 +43950,7 @@ module.exports = interceptorOpts => {
           servername: origin.hostname, // For SNI on TLS
           origin: newOrigin,
           headers: {
-            host: origin.hostname,
+            host: origin.host,
             ...origDispatchOpts.headers
           }
         }
@@ -43914,20 +43975,18 @@ module.exports = interceptorOpts => {
 "use strict";
 
 
-const util = __nccwpck_require__(3440)
 const { InvalidArgumentError, RequestAbortedError } = __nccwpck_require__(8707)
 const DecoratorHandler = __nccwpck_require__(8155)
 
 class DumpHandler extends DecoratorHandler {
   #maxSize = 1024 * 1024
-  #abort = null
   #dumped = false
-  #aborted = false
   #size = 0
-  #reason = null
-  #handler = null
+  #controller = null
+  aborted = false
+  reason = false
 
-  constructor ({ maxSize }, handler) {
+  constructor ({ maxSize, signal }, handler) {
     if (maxSize != null && (!Number.isFinite(maxSize) || maxSize < 1)) {
       throw new InvalidArgumentError('maxSize must be a number greater than 0')
     }
@@ -43935,23 +43994,22 @@ class DumpHandler extends DecoratorHandler {
     super(handler)
 
     this.#maxSize = maxSize ?? this.#maxSize
-    this.#handler = handler
+    // this.#handler = handler
   }
 
-  onConnect (abort) {
-    this.#abort = abort
-
-    this.#handler.onConnect(this.#customAbort.bind(this))
+  #abort (reason) {
+    this.aborted = true
+    this.reason = reason
   }
 
-  #customAbort (reason) {
-    this.#aborted = true
-    this.#reason = reason
+  onRequestStart (controller, context) {
+    controller.abort = this.#abort.bind(this)
+    this.#controller = controller
+
+    return super.onRequestStart(controller, context)
   }
 
-  // TODO: will require adjustment after new hooks are out
-  onHeaders (statusCode, rawHeaders, resume, statusMessage) {
-    const headers = util.parseHeaders(rawHeaders)
+  onResponseStart (controller, statusCode, headers, statusMessage) {
     const contentLength = headers['content-length']
 
     if (contentLength != null && contentLength > this.#maxSize) {
@@ -43962,55 +44020,50 @@ class DumpHandler extends DecoratorHandler {
       )
     }
 
-    if (this.#aborted) {
+    if (this.aborted === true) {
       return true
     }
 
-    return this.#handler.onHeaders(
-      statusCode,
-      rawHeaders,
-      resume,
-      statusMessage
-    )
+    return super.onResponseStart(controller, statusCode, headers, statusMessage)
   }
 
-  onError (err) {
+  onResponseError (controller, err) {
     if (this.#dumped) {
       return
     }
 
-    err = this.#reason ?? err
+    err = this.#controller.reason ?? err
 
-    this.#handler.onError(err)
+    super.onResponseError(controller, err)
   }
 
-  onData (chunk) {
+  onResponseData (controller, chunk) {
     this.#size = this.#size + chunk.length
 
     if (this.#size >= this.#maxSize) {
       this.#dumped = true
 
-      if (this.#aborted) {
-        this.#handler.onError(this.#reason)
+      if (this.aborted === true) {
+        super.onResponseError(controller, this.reason)
       } else {
-        this.#handler.onComplete([])
+        super.onResponseEnd(controller, {})
       }
     }
 
     return true
   }
 
-  onComplete (trailers) {
+  onResponseEnd (controller, trailers) {
     if (this.#dumped) {
       return
     }
 
-    if (this.#aborted) {
-      this.#handler.onError(this.reason)
+    if (this.#controller.aborted === true) {
+      super.onResponseError(controller, this.reason)
       return
     }
 
-    this.#handler.onComplete(trailers)
+    super.onResponseEnd(controller, trailers)
   }
 }
 
@@ -44021,13 +44074,9 @@ function createDumpInterceptor (
 ) {
   return dispatch => {
     return function Intercept (opts, handler) {
-      const { dumpMaxSize = defaultMaxSize } =
-        opts
+      const { dumpMaxSize = defaultMaxSize } = opts
 
-      const dumpHandler = new DumpHandler(
-        { maxSize: dumpMaxSize },
-        handler
-      )
+      const dumpHandler = new DumpHandler({ maxSize: dumpMaxSize, signal: opts.signal }, handler)
 
       return dispatch(opts, dumpHandler)
     }
@@ -44074,44 +44123,42 @@ module.exports = createRedirectInterceptor
 "use strict";
 
 
-const { parseHeaders } = __nccwpck_require__(3440)
+// const { parseHeaders } = require('../core/util')
 const DecoratorHandler = __nccwpck_require__(8155)
 const { ResponseError } = __nccwpck_require__(8707)
 
 class ResponseErrorHandler extends DecoratorHandler {
-  #handler
   #statusCode
   #contentType
   #decoder
   #headers
   #body
 
-  constructor (opts, { handler }) {
+  constructor (_opts, { handler }) {
     super(handler)
-    this.#handler = handler
   }
 
-  onConnect (abort) {
+  #checkContentType (contentType) {
+    return (this.#contentType ?? '').indexOf(contentType) === 0
+  }
+
+  onRequestStart (controller, context) {
     this.#statusCode = 0
     this.#contentType = null
     this.#decoder = null
     this.#headers = null
     this.#body = ''
 
-    return this.#handler.onConnect(abort)
+    return super.onRequestStart(controller, context)
   }
 
-  #checkContentType (contentType) {
-    return this.#contentType.indexOf(contentType) === 0
-  }
-
-  onHeaders (statusCode, rawHeaders, resume, statusMessage, headers = parseHeaders(rawHeaders)) {
+  onResponseStart (controller, statusCode, headers, statusMessage) {
     this.#statusCode = statusCode
     this.#headers = headers
     this.#contentType = headers['content-type']
 
     if (this.#statusCode < 400) {
-      return this.#handler.onHeaders(statusCode, rawHeaders, resume, statusMessage, headers)
+      return super.onResponseStart(controller, statusCode, headers, statusMessage)
     }
 
     if (this.#checkContentType('application/json') || this.#checkContentType('text/plain')) {
@@ -44119,15 +44166,15 @@ class ResponseErrorHandler extends DecoratorHandler {
     }
   }
 
-  onData (chunk) {
+  onResponseData (controller, chunk) {
     if (this.#statusCode < 400) {
-      return this.#handler.onData(chunk)
+      return super.onResponseData(controller, chunk)
     }
 
     this.#body += this.#decoder?.decode(chunk, { stream: true }) ?? ''
   }
 
-  onComplete (rawTrailers) {
+  onResponseEnd (controller, trailers) {
     if (this.#statusCode >= 400) {
       this.#body += this.#decoder?.decode(undefined, { stream: false }) ?? ''
 
@@ -44151,14 +44198,14 @@ class ResponseErrorHandler extends DecoratorHandler {
         Error.stackTraceLimit = stackTraceLimit
       }
 
-      this.#handler.onError(err)
+      super.onResponseError(controller, err)
     } else {
-      this.#handler.onComplete(rawTrailers)
+      super.onResponseEnd(controller, trailers)
     }
   }
 
-  onError (err) {
-    this.#handler.onError(err)
+  onResponseError (controller, err) {
+    super.onResponseError(controller, err)
   }
 }
 
@@ -45822,7 +45869,6 @@ const {
 } = __nccwpck_require__(3440)
 
 /**
- *
  * @param {import('../../types/dispatcher.d.ts').default.DispatchOptions} opts
  */
 function makeCacheKey (opts) {
@@ -46174,6 +46220,273 @@ module.exports = {
   isEtagUsable,
   assertCacheMethods,
   assertCacheStore
+}
+
+
+/***/ }),
+
+/***/ 5453:
+/***/ ((module) => {
+
+"use strict";
+
+
+const IMF_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+const IMF_SPACES = [4, 7, 11, 16, 25]
+const IMF_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+const IMF_COLONS = [19, 22]
+
+const ASCTIME_SPACES = [3, 7, 10, 19]
+
+const RFC850_DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+
+/**
+ * @see https://www.rfc-editor.org/rfc/rfc9110.html#name-date-time-formats
+ *
+ * @param {string} date
+ * @param {Date} [now]
+ * @returns {Date | undefined}
+ */
+function parseHttpDate (date, now) {
+  // Sun, 06 Nov 1994 08:49:37 GMT    ; IMF-fixdate
+  // Sun Nov  6 08:49:37 1994         ; ANSI C's asctime() format
+  // Sunday, 06-Nov-94 08:49:37 GMT   ; obsolete RFC 850 format
+
+  date = date.toLowerCase()
+
+  switch (date[3]) {
+    case ',': return parseImfDate(date)
+    case ' ': return parseAscTimeDate(date)
+    default: return parseRfc850Date(date, now)
+  }
+}
+
+/**
+ * @see https://httpwg.org/specs/rfc9110.html#preferred.date.format
+ *
+ * @param {string} date
+ * @returns {Date | undefined}
+ */
+function parseImfDate (date) {
+  if (date.length !== 29) {
+    return undefined
+  }
+
+  if (!date.endsWith('gmt')) {
+    // Unsupported timezone
+    return undefined
+  }
+
+  for (const spaceInx of IMF_SPACES) {
+    if (date[spaceInx] !== ' ') {
+      return undefined
+    }
+  }
+
+  for (const colonIdx of IMF_COLONS) {
+    if (date[colonIdx] !== ':') {
+      return undefined
+    }
+  }
+
+  const dayName = date.substring(0, 3)
+  if (!IMF_DAYS.includes(dayName)) {
+    return undefined
+  }
+
+  const dayString = date.substring(5, 7)
+  const day = Number.parseInt(dayString)
+  if (isNaN(day) || (day < 10 && dayString[0] !== '0')) {
+    // Not a number, 0, or it's less than 10 and didn't start with a 0
+    return undefined
+  }
+
+  const month = date.substring(8, 11)
+  const monthIdx = IMF_MONTHS.indexOf(month)
+  if (monthIdx === -1) {
+    return undefined
+  }
+
+  const year = Number.parseInt(date.substring(12, 16))
+  if (isNaN(year)) {
+    return undefined
+  }
+
+  const hourString = date.substring(17, 19)
+  const hour = Number.parseInt(hourString)
+  if (isNaN(hour) || (hour < 10 && hourString[0] !== '0')) {
+    return undefined
+  }
+
+  const minuteString = date.substring(20, 22)
+  const minute = Number.parseInt(minuteString)
+  if (isNaN(minute) || (minute < 10 && minuteString[0] !== '0')) {
+    return undefined
+  }
+
+  const secondString = date.substring(23, 25)
+  const second = Number.parseInt(secondString)
+  if (isNaN(second) || (second < 10 && secondString[0] !== '0')) {
+    return undefined
+  }
+
+  return new Date(Date.UTC(year, monthIdx, day, hour, minute, second))
+}
+
+/**
+ * @see https://httpwg.org/specs/rfc9110.html#obsolete.date.formats
+ *
+ * @param {string} date
+ * @returns {Date | undefined}
+ */
+function parseAscTimeDate (date) {
+  // This is assumed to be in UTC
+
+  if (date.length !== 24) {
+    return undefined
+  }
+
+  for (const spaceIdx of ASCTIME_SPACES) {
+    if (date[spaceIdx] !== ' ') {
+      return undefined
+    }
+  }
+
+  const dayName = date.substring(0, 3)
+  if (!IMF_DAYS.includes(dayName)) {
+    return undefined
+  }
+
+  const month = date.substring(4, 7)
+  const monthIdx = IMF_MONTHS.indexOf(month)
+  if (monthIdx === -1) {
+    return undefined
+  }
+
+  const dayString = date.substring(8, 10)
+  const day = Number.parseInt(dayString)
+  if (isNaN(day) || (day < 10 && dayString[0] !== ' ')) {
+    return undefined
+  }
+
+  const hourString = date.substring(11, 13)
+  const hour = Number.parseInt(hourString)
+  if (isNaN(hour) || (hour < 10 && hourString[0] !== '0')) {
+    return undefined
+  }
+
+  const minuteString = date.substring(14, 16)
+  const minute = Number.parseInt(minuteString)
+  if (isNaN(minute) || (minute < 10 && minuteString[0] !== '0')) {
+    return undefined
+  }
+
+  const secondString = date.substring(17, 19)
+  const second = Number.parseInt(secondString)
+  if (isNaN(second) || (second < 10 && secondString[0] !== '0')) {
+    return undefined
+  }
+
+  const year = Number.parseInt(date.substring(20, 24))
+  if (isNaN(year)) {
+    return undefined
+  }
+
+  return new Date(Date.UTC(year, monthIdx, day, hour, minute, second))
+}
+
+/**
+ * @see https://httpwg.org/specs/rfc9110.html#obsolete.date.formats
+ *
+ * @param {string} date
+ * @param {Date} [now]
+ * @returns {Date | undefined}
+ */
+function parseRfc850Date (date, now = new Date()) {
+  if (!date.endsWith('gmt')) {
+    // Unsupported timezone
+    return undefined
+  }
+
+  const commaIndex = date.indexOf(',')
+  if (commaIndex === -1) {
+    return undefined
+  }
+
+  if ((date.length - commaIndex - 1) !== 23) {
+    return undefined
+  }
+
+  const dayName = date.substring(0, commaIndex)
+  if (!RFC850_DAYS.includes(dayName)) {
+    return undefined
+  }
+
+  if (
+    date[commaIndex + 1] !== ' ' ||
+    date[commaIndex + 4] !== '-' ||
+    date[commaIndex + 8] !== '-' ||
+    date[commaIndex + 11] !== ' ' ||
+    date[commaIndex + 14] !== ':' ||
+    date[commaIndex + 17] !== ':' ||
+    date[commaIndex + 20] !== ' '
+  ) {
+    return undefined
+  }
+
+  const dayString = date.substring(commaIndex + 2, commaIndex + 4)
+  const day = Number.parseInt(dayString)
+  if (isNaN(day) || (day < 10 && dayString[0] !== '0')) {
+    // Not a number, or it's less than 10 and didn't start with a 0
+    return undefined
+  }
+
+  const month = date.substring(commaIndex + 5, commaIndex + 8)
+  const monthIdx = IMF_MONTHS.indexOf(month)
+  if (monthIdx === -1) {
+    return undefined
+  }
+
+  // As of this point year is just the decade (i.e. 94)
+  let year = Number.parseInt(date.substring(commaIndex + 9, commaIndex + 11))
+  if (isNaN(year)) {
+    return undefined
+  }
+
+  const currentYear = now.getUTCFullYear()
+  const currentDecade = currentYear % 100
+  const currentCentury = Math.floor(currentYear / 100)
+
+  if (year > currentDecade && year - currentDecade >= 50) {
+    // Over 50 years in future, go to previous century
+    year += (currentCentury - 1) * 100
+  } else {
+    year += currentCentury * 100
+  }
+
+  const hourString = date.substring(commaIndex + 12, commaIndex + 14)
+  const hour = Number.parseInt(hourString)
+  if (isNaN(hour) || (hour < 10 && hourString[0] !== '0')) {
+    return undefined
+  }
+
+  const minuteString = date.substring(commaIndex + 15, commaIndex + 17)
+  const minute = Number.parseInt(minuteString)
+  if (isNaN(minute) || (minute < 10 && minuteString[0] !== '0')) {
+    return undefined
+  }
+
+  const secondString = date.substring(commaIndex + 18, commaIndex + 20)
+  const second = Number.parseInt(secondString)
+  if (isNaN(second) || (second < 10 && secondString[0] !== '0')) {
+    return undefined
+  }
+
+  return new Date(Date.UTC(year, monthIdx, day, hour, minute, second))
+}
+
+module.exports = {
+  parseHttpDate
 }
 
 
@@ -50444,7 +50757,7 @@ function parseMIMEType (input) {
 
   // 5. If position is past the end of input, then return
   // failure
-  if (position.position > input.length) {
+  if (position.position >= input.length) {
     return 'failure'
   }
 
@@ -50525,7 +50838,7 @@ function parseMIMEType (input) {
     }
 
     // 6. If position is past the end of input, then break.
-    if (position.position > input.length) {
+    if (position.position >= input.length) {
       break
     }
 
