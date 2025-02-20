@@ -63,7 +63,7 @@ async function calculateTags({
   //
   core.debug(`ref: ${ref}`);
 
-  const r = { tags: [], currentTag: null, existingTags: null };
+  const r = { tags: [], newTag: null, existingTags: null };
 
   if (!ref) {
     core.debug("No ref");
@@ -88,10 +88,10 @@ async function calculateTags({
     throw new Error(`Not a tag or branch: ${ref}`);
   }
 
-  const currentTag = ref.substring(10);
-  core.debug(`currentTag: ${currentTag}`);
-  if (!semver.valid(currentTag, { loose: true })) {
-    throw new Error(`Invalid semver tag: ${currentTag}`);
+  const newTag = ref.substring(10);
+  core.debug(`newTag: ${newTag}`);
+  if (!semver.valid(newTag, { loose: true })) {
+    throw new Error(`Invalid semver tag: ${newTag}`);
   }
 
   const octokit = github.getOctokit(token);
@@ -101,27 +101,27 @@ async function calculateTags({
   });
   const existingTags = tagrefs.map((a) => a.name);
   const outputTags = await calculateTagsFromList({
-    currentTag,
+    newTag,
     existingTags,
     prefix,
     suffix,
   });
-  return { tags: outputTags, currentTag, existingTags };
+  return { tags: outputTags, newTag, existingTags };
 }
 
 async function calculateTagsFromList({
-  currentTag,
+  newTag,
   existingTags,
   prefix = "",
   suffix = "",
 }) {
-  const current = semver.parse(currentTag, {
+  const current = semver.parse(newTag, {
     includePrerelease: true,
     loose: true,
   });
   if (!supportedPrerelease(current.prerelease)) {
-    core.warning(`Tag prerelease ${currentTag} is not supported`);
-    return expandPrefixSuffix(prefix, suffix, currentTag);
+    core.warning(`Tag prerelease ${newTag} is not supported`);
+    return expandPrefixSuffix(prefix, suffix, newTag);
   }
 
   const parsedTagrefs = existingTags
@@ -208,7 +208,7 @@ async function run() {
     // githubToken: ${{ secrets.GITHUB_TOKEN }}
     const githubToken = core.getInput("githubToken");
     const existingTagsInput = core.getInput("existingTags");
-    const currentTagInput = core.getInput("currentTag");
+    const newTagInput = core.getInput("newTag");
     const prefix = core.getInput("prefix");
     const suffix = core.getInput("suffix");
     const defaultTag = core.getInput("defaultTag");
@@ -217,18 +217,18 @@ async function run() {
     core.debug(JSON.stringify(github.context));
 
     if (
-      (existingTagsInput && !currentTagInput) ||
-      (!existingTagsInput && currentTagInput)
+      (existingTagsInput && !newTagInput) ||
+      (!existingTagsInput && newTagInput)
     ) {
-      throw new Error("existingTags and currentTag must be provided together");
+      throw new Error("existingTags and newTag must be provided together");
     }
 
-    let allTags, existingTags, currentTag;
-    if (existingTagsInput && currentTagInput) {
+    let allTags, existingTags, newTag;
+    if (existingTagsInput && newTagInput) {
       existingTags = JSON.parse(existingTagsInput);
-      currentTag = currentTagInput;
+      newTag = newTagInput;
       allTags = await calculateTagsFromList({
-        currentTag: currentTag,
+        newTag: newTag,
         // existingTags can be the empty list
         existingTags: existingTags,
         prefix: prefix,
@@ -237,7 +237,7 @@ async function run() {
     } else {
       ({
         tags: allTags,
-        currentTag,
+        newTag,
         existingTags,
       } = await calculateTags({
         token: githubToken,
@@ -253,7 +253,7 @@ async function run() {
 
     core.info(allTags);
     core.setOutput("tags", allTags);
-    core.setOutput("currentTag", currentTag);
+    core.setOutput("newTag", newTag);
     core.setOutput("existingTags", existingTags);
   } catch (error) {
     core.setFailed(error.message);

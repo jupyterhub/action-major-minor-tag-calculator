@@ -36,14 +36,14 @@ test("No other tags", async () => {
     },
   ]);
 
-  const { tags, currentTag, existingTags } = await calculateTags({
+  const { tags, newTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: "refs/tags/0.0.1",
   });
   expect(tags).toEqual(["0.0.1", "0.0", "0", "latest"]);
-  expect(currentTag).toEqual("0.0.1");
+  expect(newTag).toEqual("0.0.1");
   expect(existingTags).toEqual(["0.0.1"]);
 });
 
@@ -122,14 +122,14 @@ test("Includes pre-releases", async () => {
       name: "1.1.0-1",
     },
   ]);
-  const { tags, currentTag, existingTags } = await calculateTags({
+  const { tags, newTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: "refs/tags/1.1.0-2",
   });
   expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1"]);
-  expect(currentTag).toEqual("1.1.0-2");
+  expect(newTag).toEqual("1.1.0-2");
   expect(existingTags).toEqual(["1.0.0", "2.0.0-1", "1.1.0-1"]);
 });
 
@@ -210,14 +210,14 @@ test("Handling build number comparisons numerically", async () => {
 
 test("Unsupported prerelease tag", async () => {
   tagInterceptor.reply(200, []);
-  const { tags, currentTag, existingTags } = await calculateTags({
+  const { tags, newTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: "refs/tags/2.0.0-rc1",
   });
   expect(tags).toEqual(["2.0.0-rc1"]);
-  expect(currentTag).toEqual("2.0.0-rc1");
+  expect(newTag).toEqual("2.0.0-rc1");
   expect(existingTags).toEqual([]);
 });
 
@@ -255,19 +255,19 @@ test("Invalid semver tag", async () => {
 });
 
 test("No ref", async () => {
-  const { tags, currentTag, existingTags } = await calculateTags({
+  const { tags, newTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: null,
   });
   expect(tags).toEqual([]);
-  expect(currentTag).toEqual(null);
+  expect(newTag).toEqual(null);
   expect(existingTags).toEqual(null);
 });
 
 test("No ref use default", async () => {
-  const { tags, currentTag, existingTags } = await calculateTags({
+  const { tags, newTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -275,7 +275,7 @@ test("No ref use default", async () => {
     defaultTag: "default-tag",
   });
   expect(tags).toEqual(["default-tag"]);
-  expect(currentTag).toEqual(null);
+  expect(newTag).toEqual(null);
   expect(existingTags).toEqual(null);
 });
 
@@ -422,14 +422,14 @@ test("Multiple prefix and suffix with empty string", async () => {
 });
 
 test("Branch", async () => {
-  const { tags, currentTag, existingTags } = await calculateTags({
+  const { tags, newTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
     ref: "refs/heads/main",
   });
   expect(tags).toEqual(["main"]);
-  expect(currentTag).toEqual(null);
+  expect(newTag).toEqual(null);
   expect(existingTags).toEqual(null);
 });
 
@@ -504,7 +504,7 @@ test("Includes pre-releases one with new tag", async () => {
 
 test("Externally provided tags", async () => {
   const tags = await calculateTagsFromList({
-    currentTag: "4.1.2-10",
+    newTag: "4.1.2-10",
     existingTags: [
       "other",
       "3.1.2",
@@ -523,7 +523,7 @@ test("Externally provided tags", async () => {
 
 test("Externally provided tags including existing current", async () => {
   const tags = await calculateTagsFromList({
-    currentTag: "4.1.2-10",
+    newTag: "4.1.2-10",
     existingTags: [
       "other",
       "3.1.2",
@@ -545,7 +545,7 @@ describe("main", () => {
   const mockInputs = {
     githubToken: "",
     existingTags: "[]",
-    currentTag: "1.2.3",
+    newTag: "1.2.3",
     prefix: "",
     suffix: "",
     defaultTag: "",
@@ -569,7 +569,7 @@ describe("main", () => {
     expect(setOutput).toHaveBeenCalledTimes(3);
 
     expect(setOutput.mock.calls[0]).toEqual(["tags", ["1.2.3", "1.2", "1"]]);
-    expect(setOutput.mock.calls[1]).toEqual(["currentTag", "1.2.3"]);
+    expect(setOutput.mock.calls[1]).toEqual(["newTag", "1.2.3"]);
     expect(setOutput.mock.calls[2]).toEqual([
       "existingTags",
       ["asd", "2.0.0-0"],
@@ -595,7 +595,7 @@ describe("main", () => {
       "tags",
       ["1.2.3", "1.2", "1", "latest"],
     ]);
-    expect(setOutput.mock.calls[1]).toEqual(["currentTag", "1.2.3"]);
+    expect(setOutput.mock.calls[1]).toEqual(["newTag", "1.2.3"]);
     expect(setOutput.mock.calls[2]).toEqual(["existingTags", []]);
   });
 });
