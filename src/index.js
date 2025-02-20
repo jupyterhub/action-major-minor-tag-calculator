@@ -63,7 +63,7 @@ async function calculateTags({
   //
   core.debug(`ref: ${ref}`);
 
-  const r = { tags: [], currentTag: null, tagList: null };
+  const r = { tags: [], currentTag: null, existingTags: null };
 
   if (!ref) {
     core.debug("No ref");
@@ -99,19 +99,19 @@ async function calculateTags({
     owner: owner,
     repo: repo,
   });
-  const tagList = tagrefs.map((a) => a.name);
+  const existingTags = tagrefs.map((a) => a.name);
   const outputTags = await calculateTagsFromList({
     currentTag,
-    tagList,
+    existingTags,
     prefix,
     suffix,
   });
-  return { tags: outputTags, currentTag, tagList };
+  return { tags: outputTags, currentTag, existingTags };
 }
 
 async function calculateTagsFromList({
   currentTag,
-  tagList,
+  existingTags,
   prefix = "",
   suffix = "",
 }) {
@@ -124,7 +124,7 @@ async function calculateTagsFromList({
     return expandPrefixSuffix(prefix, suffix, currentTag);
   }
 
-  const parsedTagrefs = tagList
+  const parsedTagrefs = existingTags
     .filter((a) => semver.valid(a, { loose: true }))
     .map((a) => semver.parse(a, { includePrerelease: true, loose: true }));
 
@@ -207,7 +207,7 @@ async function run() {
     // The workflow must set githubToken to the GitHub Secret Token
     // githubToken: ${{ secrets.GITHUB_TOKEN }}
     const githubToken = core.getInput("githubToken");
-    const tagListInput = core.getInput("tagList");
+    const existingTagsInput = core.getInput("existingTags");
     const currentTagInput = core.getInput("currentTag");
     const prefix = core.getInput("prefix");
     const suffix = core.getInput("suffix");
@@ -217,20 +217,20 @@ async function run() {
     core.debug(JSON.stringify(github.context));
 
     if (
-      (tagListInput && !currentTagInput) ||
-      (!tagListInput && currentTagInput)
+      (existingTagsInput && !currentTagInput) ||
+      (!existingTagsInput && currentTagInput)
     ) {
-      throw new Error("tagList and currentTag must be provided together");
+      throw new Error("existingTags and currentTag must be provided together");
     }
 
-    let allTags, tagList, currentTag;
-    if (tagListInput && currentTagInput) {
-      tagList = JSON.parse(tagListInput);
+    let allTags, existingTags, currentTag;
+    if (existingTagsInput && currentTagInput) {
+      existingTags = JSON.parse(existingTagsInput);
       currentTag = currentTagInput;
       allTags = await calculateTagsFromList({
         currentTag: currentTag,
-        // tagList can be the empty list
-        tagList: tagList,
+        // existingTags can be the empty list
+        existingTags: existingTags,
         prefix: prefix,
         suffix: suffix,
       });
@@ -238,7 +238,7 @@ async function run() {
       ({
         tags: allTags,
         currentTag,
-        tagList,
+        existingTags,
       } = await calculateTags({
         token: githubToken,
         owner: github.context.payload.repository.owner.login,
@@ -254,7 +254,7 @@ async function run() {
     core.info(allTags);
     core.setOutput("tags", allTags);
     core.setOutput("currentTag", currentTag);
-    core.setOutput("tagList", tagList);
+    core.setOutput("existingTags", existingTags);
   } catch (error) {
     core.setFailed(error.message);
   }

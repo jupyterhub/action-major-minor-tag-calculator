@@ -36,7 +36,7 @@ test("No other tags", async () => {
     },
   ]);
 
-  const { tags, currentTag, tagList } = await calculateTags({
+  const { tags, currentTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -44,7 +44,7 @@ test("No other tags", async () => {
   });
   expect(tags).toEqual(["0.0.1", "0.0", "0", "latest"]);
   expect(currentTag).toEqual("0.0.1");
-  expect(tagList).toEqual(["0.0.1"]);
+  expect(existingTags).toEqual(["0.0.1"]);
 });
 
 test("Is the latest tag", async () => {
@@ -122,7 +122,7 @@ test("Includes pre-releases", async () => {
       name: "1.1.0-1",
     },
   ]);
-  const { tags, currentTag, tagList } = await calculateTags({
+  const { tags, currentTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -130,7 +130,7 @@ test("Includes pre-releases", async () => {
   });
   expect(tags).toEqual(["1.1.0-2", "1.1.0", "1.1", "1"]);
   expect(currentTag).toEqual("1.1.0-2");
-  expect(tagList).toEqual(["1.0.0", "2.0.0-1", "1.1.0-1"]);
+  expect(existingTags).toEqual(["1.0.0", "2.0.0-1", "1.1.0-1"]);
 });
 
 test("Includes pre-releases jump one", async () => {
@@ -210,7 +210,7 @@ test("Handling build number comparisons numerically", async () => {
 
 test("Unsupported prerelease tag", async () => {
   tagInterceptor.reply(200, []);
-  const { tags, currentTag, tagList } = await calculateTags({
+  const { tags, currentTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -218,7 +218,7 @@ test("Unsupported prerelease tag", async () => {
   });
   expect(tags).toEqual(["2.0.0-rc1"]);
   expect(currentTag).toEqual("2.0.0-rc1");
-  expect(tagList).toEqual([]);
+  expect(existingTags).toEqual([]);
 });
 
 test("Unsupported prerelease tag, loose parsing", async () => {
@@ -255,7 +255,7 @@ test("Invalid semver tag", async () => {
 });
 
 test("No ref", async () => {
-  const { tags, currentTag, tagList } = await calculateTags({
+  const { tags, currentTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -263,11 +263,11 @@ test("No ref", async () => {
   });
   expect(tags).toEqual([]);
   expect(currentTag).toEqual(null);
-  expect(tagList).toEqual(null);
+  expect(existingTags).toEqual(null);
 });
 
 test("No ref use default", async () => {
-  const { tags, currentTag, tagList } = await calculateTags({
+  const { tags, currentTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -276,7 +276,7 @@ test("No ref use default", async () => {
   });
   expect(tags).toEqual(["default-tag"]);
   expect(currentTag).toEqual(null);
-  expect(tagList).toEqual(null);
+  expect(existingTags).toEqual(null);
 });
 
 test("Single prefix", async () => {
@@ -422,7 +422,7 @@ test("Multiple prefix and suffix with empty string", async () => {
 });
 
 test("Branch", async () => {
-  const { tags, currentTag, tagList } = await calculateTags({
+  const { tags, currentTag, existingTags } = await calculateTags({
     token: "TOKEN",
     owner: "owner",
     repo: "repo",
@@ -430,7 +430,7 @@ test("Branch", async () => {
   });
   expect(tags).toEqual(["main"]);
   expect(currentTag).toEqual(null);
-  expect(tagList).toEqual(null);
+  expect(existingTags).toEqual(null);
 });
 
 test("Branch doesn't match regex", async () => {
@@ -505,7 +505,7 @@ test("Includes pre-releases one with new tag", async () => {
 test("Externally provided tags", async () => {
   const tags = await calculateTagsFromList({
     currentTag: "4.1.2-10",
-    tagList: [
+    existingTags: [
       "other",
       "3.1.2",
       "4.0.0",
@@ -524,7 +524,7 @@ test("Externally provided tags", async () => {
 test("Externally provided tags including existing current", async () => {
   const tags = await calculateTagsFromList({
     currentTag: "4.1.2-10",
-    tagList: [
+    existingTags: [
       "other",
       "3.1.2",
       "4.0.0",
@@ -544,7 +544,7 @@ test("Externally provided tags including existing current", async () => {
 describe("main", () => {
   const mockInputs = {
     githubToken: "",
-    tagList: "[]",
+    existingTags: "[]",
     currentTag: "1.2.3",
     prefix: "",
     suffix: "",
@@ -559,7 +559,7 @@ describe("main", () => {
     const setFailed = jest.spyOn(core, "setFailed");
 
     core.getInput.mockImplementation((a) => {
-      return { ...mockInputs, tagList: '["asd", "2.0.0-0"]' }[a];
+      return { ...mockInputs, existingTags: '["asd", "2.0.0-0"]' }[a];
     });
 
     await testExports.run();
@@ -570,7 +570,10 @@ describe("main", () => {
 
     expect(setOutput.mock.calls[0]).toEqual(["tags", ["1.2.3", "1.2", "1"]]);
     expect(setOutput.mock.calls[1]).toEqual(["currentTag", "1.2.3"]);
-    expect(setOutput.mock.calls[2]).toEqual(["tagList", ["asd", "2.0.0-0"]]);
+    expect(setOutput.mock.calls[2]).toEqual([
+      "existingTags",
+      ["asd", "2.0.0-0"],
+    ]);
   });
 
   it("run with provided tags empty", async () => {
@@ -593,6 +596,6 @@ describe("main", () => {
       ["1.2.3", "1.2", "1", "latest"],
     ]);
     expect(setOutput.mock.calls[1]).toEqual(["currentTag", "1.2.3"]);
-    expect(setOutput.mock.calls[2]).toEqual(["tagList", []]);
+    expect(setOutput.mock.calls[2]).toEqual(["existingTags", []]);
   });
 });

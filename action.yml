@@ -16,9 +16,9 @@ inputs:
     required: false
     description: |-
       The GitHub token, required so this action can fetch tags using the GitHub API. If this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
-      Omit this if tagList and currentTag are provided.
+      Omit this if existingTags and currentTag are provided.
     default: ""
-  tagList:
+  existingTags:
     required: false
     description: |-
       List of existing tags as a JSON array, provide this if you aren't processing Git tags
@@ -64,11 +64,11 @@ inputs:
       If a branch name does not match this regex return `defaultTag` or empty instead.
     default: "^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$"
 outputs:
-  tagList:
+  existingTags:
     description: |-
       If this action was configured to fetch Git tags: if this is a tagged commit then
       this is a list of all fetched Git tags, otherwise null.
-      Otherwise this is the same as inputs.tagList.
+      Otherwise this is the same as inputs.existingTags.
   currentTag:
     description: |-
       If this action was configured to fetch Git tags: if this is a tagged commit then

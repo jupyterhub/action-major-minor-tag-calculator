@@ -32,7 +32,7 @@ By default this action works with Git tags. It will fetch tags from the current 
 You can use this action with non-Git tags by explicitly providing the list of existing tags, and the current (new) tag.
 In this case you should omit `githubToken` as no GitHub API calls are required.
 
-- `tagList`: List of existing tags as a JSON array, provide this if you aren't processing Git tags, e.g. `["1.2.3-0", "1.2.3-1"]`
+- `existingTags`: List of existing tags as a JSON array, provide this if you aren't processing Git tags, e.g. `["1.2.3-0", "1.2.3-1"]`
 - `currentTag`: The current (new) tag, provide this if you aren't processing Git tags, e.g. `"1.2.4-0"`
 
 ## Optional input parameters
