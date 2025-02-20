@@ -2,10 +2,14 @@
 
 [![build-test](https://github.com/jupyterhub/action-major-minor-tag-calculator/workflows/build-test/badge.svg)](https://github.com/jupyterhub/action-major-minor-tag-calculator/actions)
 
-This GitHub action can intelligently calculate and output a JSON formatted list of versions associated tags when a SemVer2 compliant tag is pushed go a GitHub repository.
+Intelligently tag a build artifact starting from a semantic version tag (`major.minor.patch`), and breaking in into partial components (`major,.minor`, `major`), taking into account existing partial tags.
 
-This action can be useful if a git tag like `1.2.3` is pushed to a GitHub repo and you want a GitHub Workflow's job to not only take action with regards to the pushed tag `1.2.3` specifically, but also to related tags like `1.2`, `1`, and `latest` assuming the pushed tag's version is new enough to represent those more general tags.
-This pattern is often used for tagging containers.
+This pattern is often used to tag Container images.
+For example, the most recent image may be tagged `2.3.0` and `latest`, but if you also tag the image as `2.3` and `2` users can automatically pull the most recent image in the current major release series e.g when you release `2.3.1`, but they won't automatically update when you release `3.0.0`.
+
+This GitHub action takes existing tags into account.
+Using the previous example, if you backported a fix to an older minor version and released `2.2.1` it should be tagged `2.2`.
+It should not be tagged `2` because that tags already corresponds to the newer `2.3.0`.
 
 ## Example output
 
