@@ -521,6 +521,26 @@ test("Externally provided tags", async () => {
   expect(tags).toEqual(["4.1.2-10", "4.1.2", "4.1"]);
 });
 
+test("Externally provided tags including existing current", async () => {
+  const tags = await calculateTagsFromList({
+    currentTag: "4.1.2-10",
+    tagList: [
+      "other",
+      "3.1.2",
+      "4.0.0",
+      "4.1.2",
+      "4.1.2-9",
+      "4.1.2-10invalid",
+      "4.1.2-10-invalid",
+      "4.1.2-10",
+      "4.2.0-0",
+      "5.2.2",
+      "5.2.2-2",
+    ],
+  });
+  expect(tags).toEqual(["4.1.2-10", "4.1.2", "4.1"]);
+});
+
 describe("main", () => {
   const mockInputs = {
     githubToken: "",
