@@ -62831,7 +62831,7 @@ async function calculateTags({
   //
   core.debug(`ref: ${ref}`);
 
-  const r = { tags: [], currentTag: null, tagList: null };
+  const r = { tags: [], newTag: null, existingTags: null };
 
   if (!ref) {
     core.debug("No ref");
@@ -62856,10 +62856,10 @@ async function calculateTags({
     throw new Error(`Not a tag or branch: ${ref}`);
   }
 
-  const currentTag = ref.substring(10);
-  core.debug(`currentTag: ${currentTag}`);
-  if (!semver.valid(currentTag, { loose: true })) {
-    throw new Error(`Invalid semver tag: ${currentTag}`);
+  const newTag = ref.substring(10);
+  core.debug(`newTag: ${newTag}`);
+  if (!semver.valid(newTag, { loose: true })) {
+    throw new Error(`Invalid semver tag: ${newTag}`);
   }
 
   const octokit = github.getOctokit(token);
@@ -62867,32 +62867,32 @@ async function calculateTags({
     owner: owner,
     repo: repo,
   });
-  const tagList = tagrefs.map((a) => a.name);
+  const existingTags = tagrefs.map((a) => a.name);
   const outputTags = await calculateTagsFromList({
-    currentTag,
-    tagList,
+    newTag,
+    existingTags,
     prefix,
     suffix,
   });
-  return { tags: outputTags, currentTag, tagList };
+  return { tags: outputTags, newTag, existingTags };
 }
 
 async function calculateTagsFromList({
-  currentTag,
-  tagList,
+  newTag,
+  existingTags,
   prefix = "",
   suffix = "",
 }) {
-  const current = semver.parse(currentTag, {
+  const current = semver.parse(newTag, {
     includePrerelease: true,
     loose: true,
   });
   if (!supportedPrerelease(current.prerelease)) {
-    core.warning(`Tag prerelease ${currentTag} is not supported`);
-    return expandPrefixSuffix(prefix, suffix, currentTag);
+    core.warning(`Tag prerelease ${newTag} is not supported`);
+    return expandPrefixSuffix(prefix, suffix, newTag);
   }
 
-  const parsedTagrefs = tagList
+  const parsedTagrefs = existingTags
     .filter((a) => semver.valid(a, { loose: true }))
     .map((a) => semver.parse(a, { includePrerelease: true, loose: true }));
 
@@ -62975,8 +62975,8 @@ async function run() {
     // The workflow must set githubToken to the GitHub Secret Token
     // githubToken: ${{ secrets.GITHUB_TOKEN }}
     const githubToken = core.getInput("githubToken");
-    const tagListInput = core.getInput("tagList");
-    const currentTagInput = core.getInput("currentTag");
+    const existingTagsInput = core.getInput("existingTags");
+    const newTagInput = core.getInput("newTag");
     const prefix = core.getInput("prefix");
     const suffix = core.getInput("suffix");
     const defaultTag = core.getInput("defaultTag");
@@ -62985,28 +62985,28 @@ async function run() {
     core.debug(JSON.stringify(github.context));
 
     if (
-      (tagListInput && !currentTagInput) ||
-      (!tagListInput && currentTagInput)
+      (existingTagsInput && !newTagInput) ||
+      (!existingTagsInput && newTagInput)
     ) {
-      throw new Error("tagList and currentTag must be provided together");
+      throw new Error("existingTags and newTag must be provided together");
     }
 
-    let allTags, tagList, currentTag;
-    if (tagListInput && currentTagInput) {
-      tagList = JSON.parse(tagListInput);
-      currentTag = currentTagInput;
+    let allTags, existingTags, newTag;
+    if (existingTagsInput && newTagInput) {
+      existingTags = JSON.parse(existingTagsInput);
+      newTag = newTagInput;
       allTags = await calculateTagsFromList({
-        currentTag: currentTag,
-        // tagList can be the empty list
-        tagList: tagList,
+        newTag: newTag,
+        // existingTags can be the empty list
+        existingTags: existingTags,
         prefix: prefix,
         suffix: suffix,
       });
     } else {
       ({
         tags: allTags,
-        currentTag,
-        tagList,
+        newTag,
+        existingTags,
       } = await calculateTags({
         token: githubToken,
         owner: github.context.payload.repository.owner.login,
@@ -63021,8 +63021,8 @@ async function run() {
 
     core.info(allTags);
     core.setOutput("tags", allTags);
-    core.setOutput("currentTag", currentTag);
-    core.setOutput("tagList", tagList);
+    core.setOutput("newTag", newTag);
+    core.setOutput("existingTags", existingTags);
   } catch (error) {
     core.setFailed(error.message);
   }
