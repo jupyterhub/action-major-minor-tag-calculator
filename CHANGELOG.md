@@ -1,5 +1,29 @@
 ## v3
 
+### v3.3.0 - 2025-02-28
+
+([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v3.2.0...v3.3.0))
+
+#### New features added
+
+- Allow external tags instead of fetching them from git [#354](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/354) ([@manics](https://github.com/manics))
+
+#### Documentation improvements
+
+- Update readme example [#337](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/337) ([@consideRatio](https://github.com/consideRatio))
+- Add changelog for v3.2.0 [#335](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/335) ([@consideRatio](https://github.com/consideRatio))
+
+#### Maintenance and upkeep improvements
+
+- Dependabot updates https://github.com/jupyterhub/action-major-minor-tag-calculator/pulls?q=is%3Apr+merged%3A2021-10-25..2023-11-20+author%3Aapp%2Fdependabot
+- Update dependencies [#349](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/349) ([@manics](https://github.com/manics))
+
+## Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/action-major-minor-tag-calculator/graphs/contributors?from=2024-02-28&to=2025-02-28&type=c))
+
+[@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3AconsideRatio+updated%3A2024-02-28..2025-02-28&type=Issues) | [@dependabot](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Adependabot+updated%3A2024-02-28..2025-02-28&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Amanics+updated%3A2024-02-28..2025-02-28&type=Issues)
+
 ### v3.2.0 - 2024-02-28
 
 ([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v3.1.0...v3.2.0))
