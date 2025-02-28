@@ -2,7 +2,7 @@
 
 [![build-test](https://github.com/jupyterhub/action-major-minor-tag-calculator/workflows/build-test/badge.svg)](https://github.com/jupyterhub/action-major-minor-tag-calculator/actions)
 
-Intelligently tag a build artifact starting from a semantic version tag (`major.minor.patch`), and breaking in into partial components (`major,.minor`, `major`), taking into account existing partial tags.
+Intelligently tag a build artifact starting from a semantic version tag (`major.minor.patch`), and breaking it into partial components (i.e. `major.minor`, and `major`), taking into account existing partial tags.
 
 This pattern is often used to tag Container images.
 For example, the most recent image may be tagged `2.3.0` and `latest`, but if you also tag the image as `2.3` and `2` users can automatically pull the most recent image in the current major release series e.g when you release `2.3.1`, but they won't automatically update when you release `3.0.0`.
@@ -33,11 +33,11 @@ By default this action works with Git tags. It will fetch tags from the current 
 
 - `githubToken`: The GitHub token, required so this action can fetch tags using the GitHub API. If this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
 
-You can use this action with non-Git tags by explicitly providing the list of existing tags, and the current (new) tag.
+You can use this action with non-Git tags by explicitly providing the list of existing tags, and the new tag.
 In this case you should omit `githubToken` as no GitHub API calls are required.
 
 - `existingTags`: List of existing tags as a JSON array, provide this if you aren't processing Git tags, e.g. `["1.2.3-0", "1.2.3-1"]`
-- `newTag`: The current (new) tag, provide this if you aren't processing Git tags, e.g. `"1.2.4-0"`
+- `newTag`: The new tag, provide this if you aren't processing Git tags, e.g. `"1.2.4-0"`
 
 ## Optional input parameters
 

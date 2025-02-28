@@ -26,7 +26,7 @@ inputs:
   newTag:
     required: false
     description: |-
-      The current (new) tag, provide this if you aren't processing Git tags
+      The new tag, provide this if you aren't processing Git tags
     default: ""
   prefix:
     required: false
