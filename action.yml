@@ -2,7 +2,13 @@
 ---
 author: Simon Li
 name: major-minor-tag-calculator
-description: Calculate major and minor semver tags, e.g. for tagging containers
+description: |-
+  Calculate major and minor semver tags, e.g. for tagging containers.
+  The default is for the action to fetch and parse git tags.
+  Alternatively you can provide the list of existing tags and the new tag,
+  and this action will calculate the output tags without looking at Git.
+  This action returns all considered tags so they can be passed to a second
+  invocation of the action without re-fetching the same Git tags.
 
 # Manually keep the input-, and output- descriptions in sync with the readme!
 inputs:
@@ -10,6 +16,17 @@ inputs:
     required: false
     description: |-
       The GitHub token, required so this action can fetch tags using the GitHub API. If this parameter is not set then `defaultTag` (if set) or an empty list will be returned.
+      Omit this if existingTags and newTag are provided.
+    default: ""
+  existingTags:
+    required: false
+    description: |-
+      List of existing tags as a JSON array, provide this if you aren't processing Git tags
+    default: ""
+  newTag:
+    required: false
+    description: |-
+      The new tag, provide this if you aren't processing Git tags
     default: ""
   prefix:
     required: false
@@ -47,6 +64,16 @@ inputs:
       If a branch name does not match this regex return `defaultTag` or empty instead.
     default: "^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$"
 outputs:
+  existingTags:
+    description: |-
+      If this action was configured to fetch Git tags: if this is a tagged commit then
+      this is a list of all fetched Git tags, otherwise null.
+      Otherwise this is the same as inputs.existingTags.
+  newTag:
+    description: |-
+      If this action was configured to fetch Git tags: if this is a tagged commit then
+      this is the current Git tag, otherwise null (inputs.defaultTag is not returned).
+      Otherwise this is the same as inputs.newTag.
   tags:
     description: A JSON formatted list of calculated tags.
 

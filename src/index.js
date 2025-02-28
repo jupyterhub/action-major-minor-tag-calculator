@@ -63,41 +63,35 @@ async function calculateTags({
   //
   core.debug(`ref: ${ref}`);
 
+  const r = { tags: [], newTag: null, existingTags: null };
+
   if (!ref) {
     core.debug("No ref");
     if (defaultTag) {
-      return [defaultTag];
+      return { ...r, tags: [defaultTag] };
     }
-    return [];
+    return r;
   }
   if (ref.startsWith("refs/heads/")) {
     const branch = ref.substring(11);
     core.debug(`Branch: ${branch}`);
     if (!checkAgainstRegex(branch, regexAllowed)) {
       if (defaultTag) {
-        return [defaultTag];
+        return { ...r, tags: [defaultTag] };
       }
-      return [];
+      return r;
     }
-    return expandPrefixSuffix(prefix, suffix, branch);
+    const tags = expandPrefixSuffix(prefix, suffix, branch);
+    return { ...r, tags };
   }
   if (!ref.startsWith("refs/tags/")) {
     throw new Error(`Not a tag or branch: ${ref}`);
   }
 
-  const currentTag = ref.substring(10);
-  core.debug(`currentTag: ${currentTag}`);
-  if (!semver.valid(currentTag, { loose: true })) {
-    throw new Error(`Invalid semver tag: ${currentTag}`);
-  }
-
-  const current = semver.parse(currentTag, {
-    includePrerelease: true,
-    loose: true,
-  });
-  if (!supportedPrerelease(current.prerelease)) {
-    core.warning(`Tag prerelease ${currentTag} is not supported`);
-    return expandPrefixSuffix(prefix, suffix, currentTag);
+  const newTag = ref.substring(10);
+  core.debug(`newTag: ${newTag}`);
+  if (!semver.valid(newTag, { loose: true })) {
+    throw new Error(`Invalid semver tag: ${newTag}`);
   }
 
   const octokit = github.getOctokit(token);
@@ -105,9 +99,34 @@ async function calculateTags({
     owner: owner,
     repo: repo,
   });
-  const parsedTagrefs = tagrefs
-    .filter((a) => semver.valid(a.name, { loose: true }))
-    .map((a) => semver.parse(a.name, { includePrerelease: true, loose: true }));
+  const existingTags = tagrefs.map((a) => a.name);
+  const outputTags = await calculateTagsFromList({
+    newTag,
+    existingTags,
+    prefix,
+    suffix,
+  });
+  return { tags: outputTags, newTag, existingTags };
+}
+
+async function calculateTagsFromList({
+  newTag,
+  existingTags,
+  prefix = "",
+  suffix = "",
+}) {
+  const current = semver.parse(newTag, {
+    includePrerelease: true,
+    loose: true,
+  });
+  if (!supportedPrerelease(current.prerelease)) {
+    core.warning(`Tag prerelease ${newTag} is not supported`);
+    return expandPrefixSuffix(prefix, suffix, newTag);
+  }
+
+  const parsedTagrefs = existingTags
+    .filter((a) => semver.valid(a, { loose: true }))
+    .map((a) => semver.parse(a, { includePrerelease: true, loose: true }));
 
   const tags = parsedTagrefs
     .filter((t) => supportedPrerelease(t.prerelease))
@@ -142,7 +161,6 @@ async function calculateTags({
     ),
   );
 
-  core.debug(semver.compare(current, tags[0]) >= 0);
   if (
     !tags.length ||
     semver.compare(current.toString().split("-")[0], tags[0]) >= 0
@@ -157,6 +175,7 @@ async function calculateTags({
     outputTags.push(...expandPrefixSuffix(prefix, suffix, `${current.major}`));
     outputTags.push(...expandPrefixSuffix(prefix, suffix, "latest"));
   } else if (
+    !majorTags.length ||
     semver.compare(current.toString().split("-")[0], majorTags[0]) >= 0
   ) {
     outputTags.push(
@@ -168,6 +187,7 @@ async function calculateTags({
     );
     outputTags.push(...expandPrefixSuffix(prefix, suffix, `${current.major}`));
   } else if (
+    !minorTags.length ||
     semver.compare(current.toString().split("-")[0], minorTags[0]) >= 0
   ) {
     outputTags.push(
@@ -187,25 +207,54 @@ async function run() {
     // The workflow must set githubToken to the GitHub Secret Token
     // githubToken: ${{ secrets.GITHUB_TOKEN }}
     const githubToken = core.getInput("githubToken");
+    const existingTagsInput = core.getInput("existingTags");
+    const newTagInput = core.getInput("newTag");
     const prefix = core.getInput("prefix");
     const suffix = core.getInput("suffix");
     const defaultTag = core.getInput("defaultTag");
     const branchRegex = core.getInput("branchRegex");
 
     core.debug(JSON.stringify(github.context));
-    const allTags = await calculateTags({
-      token: githubToken,
-      owner: github.context.payload.repository.owner.login,
-      repo: github.context.payload.repository.name,
-      ref: github.context.payload.ref,
-      prefix: prefix,
-      suffix: suffix,
-      defaultTag: defaultTag,
-      regexAllowed: branchRegex,
-    });
+
+    if (
+      (existingTagsInput && !newTagInput) ||
+      (!existingTagsInput && newTagInput)
+    ) {
+      throw new Error("existingTags and newTag must be provided together");
+    }
+
+    let allTags, existingTags, newTag;
+    if (existingTagsInput && newTagInput) {
+      existingTags = JSON.parse(existingTagsInput);
+      newTag = newTagInput;
+      allTags = await calculateTagsFromList({
+        newTag: newTag,
+        // existingTags can be the empty list
+        existingTags: existingTags,
+        prefix: prefix,
+        suffix: suffix,
+      });
+    } else {
+      ({
+        tags: allTags,
+        newTag,
+        existingTags,
+      } = await calculateTags({
+        token: githubToken,
+        owner: github.context.payload.repository.owner.login,
+        repo: github.context.payload.repository.name,
+        ref: github.context.payload.ref,
+        prefix: prefix,
+        suffix: suffix,
+        defaultTag: defaultTag,
+        regexAllowed: branchRegex,
+      }));
+    }
 
     core.info(allTags);
     core.setOutput("tags", allTags);
+    core.setOutput("newTag", newTag);
+    core.setOutput("existingTags", existingTags);
   } catch (error) {
     core.setFailed(error.message);
   }
@@ -217,3 +266,6 @@ if (!module.parent) {
 }
 
 exports.calculateTags = calculateTags;
+exports.calculateTagsFromList = calculateTagsFromList;
+// run is exported so it can be tested
+exports.testExports = { run };
