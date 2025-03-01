@@ -30262,7 +30262,7 @@ const testSet = (set, version, options) => {
 
 const debug = __nccwpck_require__(1159)
 const { MAX_LENGTH, MAX_SAFE_INTEGER } = __nccwpck_require__(5101)
-const { safeRe: re, t } = __nccwpck_require__(5471)
+const { safeRe: re, safeSrc: src, t } = __nccwpck_require__(5471)
 
 const parseOptions = __nccwpck_require__(356)
 const { compareIdentifiers } = __nccwpck_require__(3348)
@@ -30444,7 +30444,8 @@ class SemVer {
       }
       // Avoid an invalid semver results
       if (identifier) {
-        const match = `-${identifier}`.match(this.options.loose ? re[t.PRERELEASELOOSE] : re[t.PRERELEASE])
+        const r = new RegExp(`^${this.options.loose ? src[t.PRERELEASELOOSE] : src[t.PRERELEASE]}$`)
+        const match = `-${identifier}`.match(r)
         if (!match || match[1] !== identifier) {
           throw new Error(`invalid identifier: ${identifier}`)
         }
@@ -31301,6 +31302,7 @@ exports = module.exports = {}
 const re = exports.re = []
 const safeRe = exports.safeRe = []
 const src = exports.src = []
+const safeSrc = exports.safeSrc = []
 const t = exports.t = {}
 let R = 0
 
@@ -31333,6 +31335,7 @@ const createToken = (name, value, isGlobal) => {
   debug(name, index, value)
   t[name] = index
   src[index] = value
+  safeSrc[index] = safe
   re[index] = new RegExp(value, isGlobal ? 'g' : undefined)
   safeRe[index] = new RegExp(safe, isGlobal ? 'g' : undefined)
 }
@@ -34224,7 +34227,13 @@ class MemoryCacheStore {
     const entry = this.#entries.get(topLevelKey)?.find((entry) => (
       entry.deleteAt > now &&
       entry.method === key.method &&
-      (entry.vary == null || Object.keys(entry.vary).every(headerName => entry.vary[headerName] === key.headers?.[headerName]))
+      (entry.vary == null || Object.keys(entry.vary).every(headerName => {
+        if (entry.vary[headerName] === null) {
+          return key.headers[headerName] === undefined
+        }
+
+        return entry.vary[headerName] === key.headers[headerName]
+      }))
     ))
 
     return entry == null
@@ -34562,7 +34571,7 @@ module.exports = class SqliteCacheStore {
     const value = this.#findValue(key)
     return value
       ? {
-          body: value.body ? Buffer.from(value.body.buffer) : undefined,
+          body: value.body ? Buffer.from(value.body.buffer, value.body.byteOffset, value.body.byteLength) : undefined,
           statusCode: value.statusCode,
           statusMessage: value.statusMessage,
           headers: value.headers ? JSON.parse(value.headers) : undefined,
@@ -34741,10 +34750,6 @@ module.exports = class SqliteCacheStore {
       let matches = true
 
       if (value.vary) {
-        if (!headers) {
-          return undefined
-        }
-
         const vary = JSON.parse(value.vary)
 
         for (const header in vary) {
@@ -34770,18 +34775,21 @@ module.exports = class SqliteCacheStore {
  * @returns {boolean}
  */
 function headerValueEquals (lhs, rhs) {
+  if (lhs == null && rhs == null) {
+    return true
+  }
+
+  if ((lhs == null && rhs != null) ||
+      (lhs != null && rhs == null)) {
+    return false
+  }
+
   if (Array.isArray(lhs) && Array.isArray(rhs)) {
     if (lhs.length !== rhs.length) {
       return false
     }
 
-    for (let i = 0; i < lhs.length; i++) {
-      if (rhs.includes(lhs[i])) {
-        return false
-      }
-    }
-
-    return true
+    return lhs.every((x, i) => x === rhs[i])
   }
 
   return lhs === rhs
@@ -40835,8 +40843,6 @@ const DEFAULT_PORTS = {
   'https:': 443
 }
 
-let experimentalWarned = false
-
 class EnvHttpProxyAgent extends DispatcherBase {
   #noProxyValue = null
   #noProxyEntries = null
@@ -40845,13 +40851,6 @@ class EnvHttpProxyAgent extends DispatcherBase {
   constructor (opts = {}) {
     super()
     this.#opts = opts
-
-    if (!experimentalWarned) {
-      experimentalWarned = true
-      process.emitWarning('EnvHttpProxyAgent is experimental, expect them to change at any time.', {
-        code: 'UNDICI-EHPA'
-      })
-    }
 
     const { httpProxy, httpsProxy, noProxy, ...agentOpts } = opts
 
@@ -45612,8 +45611,10 @@ function getResponseData (data) {
     return data
   } else if (typeof data === 'object') {
     return JSON.stringify(data)
-  } else {
+  } else if (data) {
     return data.toString()
+  } else {
+    return ''
   }
 }
 
@@ -45964,10 +45965,14 @@ function makeCacheKey (opts) {
       if (typeof key !== 'string' || typeof val !== 'string') {
         throw new Error('opts.headers is not a valid header map')
       }
-      headers[key] = val
+      headers[key.toLowerCase()] = val
     }
   } else if (typeof opts.headers === 'object') {
-    headers = opts.headers
+    headers = {}
+
+    for (const key of Object.keys(opts.headers)) {
+      headers[key.toLowerCase()] = opts.headers[key]
+    }
   } else {
     throw new Error('opts.headers is not an object')
   }
@@ -46198,19 +46203,16 @@ function parseVaryHeader (varyHeader, headers) {
     return headers
   }
 
-  const output = /** @type {Record<string, string | string[]>} */ ({})
+  const output = /** @type {Record<string, string | string[] | null>} */ ({})
 
   const varyingHeaders = typeof varyHeader === 'string'
     ? varyHeader.split(',')
     : varyHeader
+
   for (const header of varyingHeaders) {
     const trimmedHeader = header.trim().toLowerCase()
 
-    if (headers[trimmedHeader]) {
-      output[trimmedHeader] = headers[trimmedHeader]
-    } else {
-      return undefined
-    }
+    output[trimmedHeader] = headers[trimmedHeader] ?? null
   }
 
   return output
@@ -49900,7 +49902,7 @@ try {
   const crypto = __nccwpck_require__(7598)
   random = (max) => crypto.randomInt(0, max)
 } catch {
-  random = (max) => Math.floor(Math.random(max))
+  random = (max) => Math.floor(Math.random() * max)
 }
 
 const textEncoder = new TextEncoder()
@@ -55219,6 +55221,14 @@ const requestFinalizer = new FinalizationRegistry(({ signal, abort }) => {
 
 const dependentControllerMap = new WeakMap()
 
+let abortSignalHasEventHandlerLeakWarning
+
+try {
+  abortSignalHasEventHandlerLeakWarning = getMaxListeners(new AbortController().signal) > 0
+} catch {
+  abortSignalHasEventHandlerLeakWarning = false
+}
+
 function buildAbort (acRef) {
   return abort
 
@@ -55606,15 +55616,10 @@ class Request {
         const acRef = new WeakRef(ac)
         const abort = buildAbort(acRef)
 
-        // Third-party AbortControllers may not work with these.
-        // See, https://github.com/nodejs/undici/pull/1910#issuecomment-1464495619.
-        try {
-          // If the max amount of listeners is equal to the default, increase it
-          // This is only available in node >= v19.9.0
-          if (typeof getMaxListeners === 'function' && getMaxListeners(signal) === defaultMaxListeners) {
-            setMaxListeners(1500, signal)
-          }
-        } catch {}
+        // If the max amount of listeners is equal to the default, increase it
+        if (abortSignalHasEventHandlerLeakWarning && getMaxListeners(signal) === defaultMaxListeners) {
+          setMaxListeners(1500, signal)
+        }
 
         util.addAbortListener(signal, abort)
         // The third argument must be a registry key to be unregistered.
