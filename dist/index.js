@@ -63176,6 +63176,7 @@ async function calculateTags({
   suffix = "",
   defaultTag = "",
   regexAllowed = "",
+  prereleaseHasBuild = false,
 }) {
   // About the parameters:
   // - token is used to authenticate against the GitHub API that in turn is used
@@ -63228,8 +63229,23 @@ async function calculateTags({
     existingTags,
     prefix,
     suffix,
+    prereleaseHasBuild,
   });
   return { tags: outputTags, newTag, existingTags };
+}
+
+function prereleaseBuildTags(newTag, prefix, suffix, prereleaseHasBuild) {
+  if (prereleaseHasBuild) {
+    const parts = /^(\S+)-(\d+)$/.exec(newTag);
+    if (parts) {
+      return [
+        ...expandPrefixSuffix(prefix, suffix, newTag),
+        ...expandPrefixSuffix(prefix, suffix, parts[1]),
+      ];
+    }
+  }
+  core.warning(`Tag prerelease ${newTag} is not supported`);
+  return expandPrefixSuffix(prefix, suffix, newTag);
 }
 
 async function calculateTagsFromList({
@@ -63237,14 +63253,14 @@ async function calculateTagsFromList({
   existingTags,
   prefix = "",
   suffix = "",
+  prereleaseHasBuild = false,
 }) {
   const current = semver.parse(newTag, {
     includePrerelease: true,
     loose: true,
   });
   if (!supportedPrerelease(current.prerelease)) {
-    core.warning(`Tag prerelease ${newTag} is not supported`);
-    return expandPrefixSuffix(prefix, suffix, newTag);
+    return prereleaseBuildTags(newTag, prefix, suffix, prereleaseHasBuild);
   }
 
   const parsedTagrefs = existingTags
@@ -63336,6 +63352,7 @@ async function run() {
     const suffix = core.getInput("suffix");
     const defaultTag = core.getInput("defaultTag");
     const branchRegex = core.getInput("branchRegex");
+    const prereleaseHasBuildInput = core.getInput("prereleaseHasBuild");
 
     core.debug(JSON.stringify(github.context));
 
@@ -63347,6 +63364,8 @@ async function run() {
     }
 
     let allTags, existingTags, newTag;
+    const prereleaseHasBuild =
+      prereleaseHasBuildInput === true || prereleaseHasBuildInput === "true";
     if (existingTagsInput && newTagInput) {
       existingTags = JSON.parse(existingTagsInput);
       newTag = newTagInput;
@@ -63356,6 +63375,7 @@ async function run() {
         existingTags: existingTags,
         prefix: prefix,
         suffix: suffix,
+        prereleaseHasBuild: prereleaseHasBuild,
       });
     } else {
       ({
@@ -63371,6 +63391,7 @@ async function run() {
         suffix: suffix,
         defaultTag: defaultTag,
         regexAllowed: branchRegex,
+        prereleaseHasBuild: prereleaseHasBuild,
       }));
     }
 
