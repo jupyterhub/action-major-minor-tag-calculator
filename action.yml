@@ -63,6 +63,12 @@ inputs:
     description: |-
       If a branch name does not match this regex return `defaultTag` or empty instead.
     default: "^[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}$"
+  prereleaseHasBuild:
+    required: false
+    description: |-
+      Set this to "true" if prereleases include a build number (PRE_RELEASE-N), and the returned tags should be PRE_RELEASE-N and PRE_RELEASE.
+      Default is to return pre-releases without processing.
+    default: ""
 outputs:
   existingTags:
     description: |-
