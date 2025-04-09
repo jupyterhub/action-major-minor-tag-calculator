@@ -1,5 +1,23 @@
 ## v3
 
+### v3.4.0 - 2025-04-09
+
+([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v3.3.0...v3.4.0))
+
+#### Enhancements made
+
+- prereleaseHasBuild: support build numbers for prereleases [#367](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/367) ([@manics](https://github.com/manics))
+
+#### Maintenance and upkeep improvements
+
+- Dependabot updates https://github.com/jupyterhub/action-major-minor-tag-calculator/pulls?q=is%3Apr+merged%3A2025-02-28..2025-04-09+author%3Aapp%2Fdependabot
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/action-major-minor-tag-calculator/graphs/contributors?from=2025-02-28&to=2025-04-09&type=c))
+
+[@dependabot](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Adependabot+updated%3A2025-02-28..2025-04-09&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Amanics+updated%3A2025-02-28..2025-04-09&type=Issues)
+
 ### v3.3.0 - 2025-02-28
 
 ([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v3.2.0...v3.3.0))
