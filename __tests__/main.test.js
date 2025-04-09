@@ -232,6 +232,25 @@ test("Unsupported prerelease tag, loose parsing", async () => {
   expect(tags).toEqual(["2.0.0b1"]);
 });
 
+test("Prerelease tag with build-number", async () => {
+  tagInterceptor.reply(200, [
+    {
+      name: "2.0.0-rc1",
+    },
+  ]);
+  const { tags, newTag, existingTags } = await calculateTags({
+    token: "TOKEN",
+    owner: "owner",
+    repo: "repo",
+    ref: "refs/tags/2.0.0-rc1-5",
+    prefix: "example.org/",
+    prereleaseHasBuild: true,
+  });
+  expect(tags).toEqual(["example.org/2.0.0-rc1-5", "example.org/2.0.0-rc1"]);
+  expect(newTag).toEqual("2.0.0-rc1-5");
+  expect(existingTags).toEqual(["2.0.0-rc1"]);
+});
+
 test("Not a tag", async () => {
   await expect(
     calculateTags({
