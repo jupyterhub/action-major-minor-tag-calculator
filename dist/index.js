@@ -32402,6 +32402,7 @@ const Agent = __nccwpck_require__(7405)
 const ProxyAgent = __nccwpck_require__(6672)
 const EnvHttpProxyAgent = __nccwpck_require__(3137)
 const RetryAgent = __nccwpck_require__(50)
+const H2CClient = __nccwpck_require__(6815)
 const errors = __nccwpck_require__(8707)
 const util = __nccwpck_require__(3440)
 const { InvalidArgumentError } = errors
@@ -32427,6 +32428,7 @@ module.exports.Agent = Agent
 module.exports.ProxyAgent = ProxyAgent
 module.exports.EnvHttpProxyAgent = EnvHttpProxyAgent
 module.exports.RetryAgent = RetryAgent
+module.exports.H2CClient = H2CClient
 module.exports.RetryHandler = RetryHandler
 
 module.exports.DecoratorHandler = DecoratorHandler
@@ -34457,6 +34459,11 @@ module.exports = class SqliteCacheStore {
     this.#db = new DatabaseSync(opts?.location ?? ':memory:')
 
     this.#db.exec(`
+      PRAGMA journal_mode = WAL;
+      PRAGMA synchronous = NORMAL;
+      PRAGMA temp_store = memory;
+      PRAGMA optimize;
+
       CREATE TABLE IF NOT EXISTS cacheInterceptorV${VERSION} (
         -- Data specific to us
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34476,9 +34483,8 @@ module.exports = class SqliteCacheStore {
         staleAt INTEGER NOT NULL
       );
 
-      CREATE INDEX IF NOT EXISTS idx_cacheInterceptorV${VERSION}_url ON cacheInterceptorV${VERSION}(url);
-      CREATE INDEX IF NOT EXISTS idx_cacheInterceptorV${VERSION}_method ON cacheInterceptorV${VERSION}(method);
-      CREATE INDEX IF NOT EXISTS idx_cacheInterceptorV${VERSION}_deleteAt ON cacheInterceptorV${VERSION}(deleteAt);
+      CREATE INDEX IF NOT EXISTS idx_cacheInterceptorV${VERSION}_getValuesQuery ON cacheInterceptorV${VERSION}(url, method, deleteAt);
+      CREATE INDEX IF NOT EXISTS idx_cacheInterceptorV${VERSION}_deleteByUrlQuery ON cacheInterceptorV${VERSION}(deleteAt);
     `)
 
     this.#getValuesQuery = this.#db.prepare(`
@@ -34688,7 +34694,7 @@ module.exports = class SqliteCacheStore {
   }
 
   #prune () {
-    if (this.size <= this.#maxCount) {
+    if (Number.isFinite(this.#maxCount) && this.size <= this.#maxCount) {
       return 0
     }
 
@@ -34810,10 +34816,7 @@ function headerValueEquals (lhs, rhs) {
 const net = __nccwpck_require__(7030)
 const assert = __nccwpck_require__(4589)
 const util = __nccwpck_require__(3440)
-const { InvalidArgumentError, ConnectTimeoutError } = __nccwpck_require__(8707)
-const timers = __nccwpck_require__(6603)
-
-function noop () {}
+const { InvalidArgumentError } = __nccwpck_require__(8707)
 
 let tls // include tls conditionally since it is not always available
 
@@ -34913,7 +34916,6 @@ function buildConnector ({ allowH2, maxCachedSessions, socketPath, timeout, sess
         servername,
         session,
         localAddress,
-        // TODO(HTTP/2): Add support for h2c
         ALPNProtocols: allowH2 ? ['http/1.1', 'h2'] : ['http/1.1'],
         socket: httpSocket, // upgrade socket connection
         port,
@@ -34945,7 +34947,7 @@ function buildConnector ({ allowH2, maxCachedSessions, socketPath, timeout, sess
       socket.setKeepAlive(true, keepAliveInitialDelay)
     }
 
-    const clearConnectTimeout = setupConnectTimeout(new WeakRef(socket), { timeout, hostname, port })
+    const clearConnectTimeout = util.setupConnectTimeout(new WeakRef(socket), { timeout, hostname, port })
 
     socket
       .setNoDelay(true)
@@ -34970,78 +34972,6 @@ function buildConnector ({ allowH2, maxCachedSessions, socketPath, timeout, sess
 
     return socket
   }
-}
-
-/**
- * @param {WeakRef<net.Socket>} socketWeakRef
- * @param {object} opts
- * @param {number} opts.timeout
- * @param {string} opts.hostname
- * @param {number} opts.port
- * @returns {() => void}
- */
-const setupConnectTimeout = process.platform === 'win32'
-  ? (socketWeakRef, opts) => {
-      if (!opts.timeout) {
-        return noop
-      }
-
-      let s1 = null
-      let s2 = null
-      const fastTimer = timers.setFastTimeout(() => {
-      // setImmediate is added to make sure that we prioritize socket error events over timeouts
-        s1 = setImmediate(() => {
-        // Windows needs an extra setImmediate probably due to implementation differences in the socket logic
-          s2 = setImmediate(() => onConnectTimeout(socketWeakRef.deref(), opts))
-        })
-      }, opts.timeout)
-      return () => {
-        timers.clearFastTimeout(fastTimer)
-        clearImmediate(s1)
-        clearImmediate(s2)
-      }
-    }
-  : (socketWeakRef, opts) => {
-      if (!opts.timeout) {
-        return noop
-      }
-
-      let s1 = null
-      const fastTimer = timers.setFastTimeout(() => {
-      // setImmediate is added to make sure that we prioritize socket error events over timeouts
-        s1 = setImmediate(() => {
-          onConnectTimeout(socketWeakRef.deref(), opts)
-        })
-      }, opts.timeout)
-      return () => {
-        timers.clearFastTimeout(fastTimer)
-        clearImmediate(s1)
-      }
-    }
-
-/**
- * @param {net.Socket} socket
- * @param {object} opts
- * @param {number} opts.timeout
- * @param {string} opts.hostname
- * @param {number} opts.port
- */
-function onConnectTimeout (socket, opts) {
-  // The socket could be already garbage collected
-  if (socket == null) {
-    return
-  }
-
-  let message = 'Connect Timeout Error'
-  if (Array.isArray(socket.autoSelectFamilyAttemptedAddresses)) {
-    message += ` (attempted addresses: ${socket.autoSelectFamilyAttemptedAddresses.join(', ')},`
-  } else {
-    message += ` (attempted address: ${opts.hostname}:${opts.port},`
-  }
-
-  message += ` timeout: ${opts.timeout}ms)`
-
-  util.destroy(socket, new ConnectTimeoutError(message))
 }
 
 module.exports = buildConnector
@@ -36320,7 +36250,8 @@ const { Blob } = __nccwpck_require__(4573)
 const nodeUtil = __nccwpck_require__(7975)
 const { stringify } = __nccwpck_require__(1792)
 const { EventEmitter: EE } = __nccwpck_require__(8474)
-const { InvalidArgumentError } = __nccwpck_require__(8707)
+const timers = __nccwpck_require__(6603)
+const { InvalidArgumentError, ConnectTimeoutError } = __nccwpck_require__(8707)
 const { headerNameLowerCasedRecord } = __nccwpck_require__(735)
 const { tree } = __nccwpck_require__(7752)
 
@@ -36338,6 +36269,8 @@ class BodyAsyncIterable {
     yield * this[kBody]
   }
 }
+
+function noop () {}
 
 /**
  * @param {*} body
@@ -37148,6 +37081,78 @@ function errorRequest (client, request, err) {
   }
 }
 
+/**
+ * @param {WeakRef<net.Socket>} socketWeakRef
+ * @param {object} opts
+ * @param {number} opts.timeout
+ * @param {string} opts.hostname
+ * @param {number} opts.port
+ * @returns {() => void}
+ */
+const setupConnectTimeout = process.platform === 'win32'
+  ? (socketWeakRef, opts) => {
+      if (!opts.timeout) {
+        return noop
+      }
+
+      let s1 = null
+      let s2 = null
+      const fastTimer = timers.setFastTimeout(() => {
+      // setImmediate is added to make sure that we prioritize socket error events over timeouts
+        s1 = setImmediate(() => {
+        // Windows needs an extra setImmediate probably due to implementation differences in the socket logic
+          s2 = setImmediate(() => onConnectTimeout(socketWeakRef.deref(), opts))
+        })
+      }, opts.timeout)
+      return () => {
+        timers.clearFastTimeout(fastTimer)
+        clearImmediate(s1)
+        clearImmediate(s2)
+      }
+    }
+  : (socketWeakRef, opts) => {
+      if (!opts.timeout) {
+        return noop
+      }
+
+      let s1 = null
+      const fastTimer = timers.setFastTimeout(() => {
+      // setImmediate is added to make sure that we prioritize socket error events over timeouts
+        s1 = setImmediate(() => {
+          onConnectTimeout(socketWeakRef.deref(), opts)
+        })
+      }, opts.timeout)
+      return () => {
+        timers.clearFastTimeout(fastTimer)
+        clearImmediate(s1)
+      }
+    }
+
+/**
+ * @param {net.Socket} socket
+ * @param {object} opts
+ * @param {number} opts.timeout
+ * @param {string} opts.hostname
+ * @param {number} opts.port
+ */
+function onConnectTimeout (socket, opts) {
+  // The socket could be already garbage collected
+  if (socket == null) {
+    return
+  }
+
+  let message = 'Connect Timeout Error'
+  if (Array.isArray(socket.autoSelectFamilyAttemptedAddresses)) {
+    message += ` (attempted addresses: ${socket.autoSelectFamilyAttemptedAddresses.join(', ')},`
+  } else {
+    message += ` (attempted address: ${opts.hostname}:${opts.port},`
+  }
+
+  message += ` timeout: ${opts.timeout}ms)`
+
+  destroy(socket, new ConnectTimeoutError(message))
+}
+
 const kEnumerableProperty = Object.create(null)
 kEnumerableProperty.enumerable = true
 
@@ -37219,7 +37224,8 @@ module.exports = {
   nodeMajor,
   nodeMinor,
   safeHTTPMethods: Object.freeze(['GET', 'HEAD', 'OPTIONS', 'TRACE']),
-  wrapRequestBody
+  wrapRequestBody,
+  setupConnectTimeout
 }
 
 
@@ -39399,6 +39405,7 @@ function onHttp2SessionGoAway (errorCode) {
   assert(client[kRunning] === 0)
 
   client.emit('disconnect', client[kUrl], [client], err)
+  client.emit('connectionError', client[kUrl], [client], err)
 
   client[kResume]()
 }
@@ -41152,6 +41159,136 @@ module.exports = class FixedQueue {
     return next
   }
 }
+
+
+/***/ }),
+
+/***/ 6815:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+"use strict";
+
+const { connect } = __nccwpck_require__(7030)
+
+const { kClose, kDestroy } = __nccwpck_require__(6443)
+const { InvalidArgumentError } = __nccwpck_require__(8707)
+const util = __nccwpck_require__(3440)
+
+const Client = __nccwpck_require__(3701)
+const DispatcherBase = __nccwpck_require__(1841)
+
+class H2CClient extends DispatcherBase {
+  #client = null
+
+  constructor (origin, clientOpts) {
+    super()
+
+    if (typeof origin === 'string') {
+      origin = new URL(origin)
+    }
+
+    if (origin.protocol !== 'http:') {
+      throw new InvalidArgumentError(
+        'h2c-client: Only h2c protocol is supported'
+      )
+    }
+
+    const { connect, maxConcurrentStreams, pipelining, ...opts } =
+      clientOpts ?? {}
+    let defaultMaxConcurrentStreams = 100
+    let defaultPipelining = 100
+
+    if (
+      maxConcurrentStreams != null &&
+      Number.isInteger(maxConcurrentStreams) &&
+      maxConcurrentStreams > 0
+    ) {
+      defaultMaxConcurrentStreams = maxConcurrentStreams
+    }
+
+    if (pipelining != null && Number.isInteger(pipelining) && pipelining > 0) {
+      defaultPipelining = pipelining
+    }
+
+    if (defaultPipelining > defaultMaxConcurrentStreams) {
+      throw new InvalidArgumentError(
+        'h2c-client: pipelining cannot be greater than maxConcurrentStreams'
+      )
+    }
+
+    this.#client = new Client(origin, {
+      ...opts,
+      connect: this.#buildConnector(connect),
+      maxConcurrentStreams: defaultMaxConcurrentStreams,
+      pipelining: defaultPipelining,
+      allowH2: true
+    })
+  }
+
+  #buildConnector (connectOpts) {
+    return (opts, callback) => {
+      const timeout = connectOpts?.connectOpts ?? 10e3
+      const { hostname, port, pathname } = opts
+      const socket = connect({
+        ...opts,
+        host: hostname,
+        port,
+        pathname
+      })
+
+      // Set TCP keep alive options on the socket here instead of in connect() for the case of assigning the socket
+      if (opts.keepAlive == null || opts.keepAlive) {
+        const keepAliveInitialDelay =
+          opts.keepAliveInitialDelay == null ? 60e3 : opts.keepAliveInitialDelay
+        socket.setKeepAlive(true, keepAliveInitialDelay)
+      }
+
+      socket.alpnProtocol = 'h2'
+
+      const clearConnectTimeout = util.setupConnectTimeout(
+        new WeakRef(socket),
+        { timeout, hostname, port }
+      )
+
+      socket
+        .setNoDelay(true)
+        .once('connect', function () {
+          queueMicrotask(clearConnectTimeout)
+
+          if (callback) {
+            const cb = callback
+            callback = null
+            cb(null, this)
+          }
+        })
+        .on('error', function (err) {
+          queueMicrotask(clearConnectTimeout)
+
+          if (callback) {
+            const cb = callback
+            callback = null
+            cb(err)
+          }
+        })
+
+      return socket
+    }
+  }
+
+  dispatch (opts, handler) {
+    return this.#client.dispatch(opts, handler)
+  }
+
+  async [kClose] () {
+    await this.#client.close()
+  }
+
+  async [kDestroy] () {
+    await this.#client.destroy()
+  }
+}
+
+module.exports = H2CClient
 
 
 /***/ }),
