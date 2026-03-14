@@ -1,4 +1,4 @@
-module.exports = {
+const jestConfig = {
   clearMocks: true,
   moduleFileExtensions: ["js"],
   testEnvironment: "node",
@@ -9,3 +9,4 @@ module.exports = {
   // },
   verbose: true,
 };
+export default jestConfig;

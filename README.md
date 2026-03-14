@@ -133,7 +133,7 @@ Build the typescript, run the formatter and linter:
 $ npm run build && npm run format && npm run lint
 ```
 
-Package the code for distribution (uses [ncc](https://github.com/zeit/ncc)):
+Package the code for distribution (uses [rollup](https://rollupjs.org/)):
 
 ```bash
 $ npm run package

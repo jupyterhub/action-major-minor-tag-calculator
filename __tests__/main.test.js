@@ -1,14 +1,21 @@
-"use strict";
+import { jest } from "@jest/globals";
+import { MockAgent, setGlobalDispatcher } from "undici";
 
-const {
-  calculateTags,
-  calculateTagsFromList,
-  testExports,
-} = require("../src/index");
-const { MockAgent, setGlobalDispatcher } = require("undici");
+// Mocks should be declared before the module being tested is imported.
+jest.unstable_mockModule("@actions/core", () => ({
+  debug: jest.fn(),
+  info: jest.fn(),
+  warning: jest.fn(),
+  getInput: jest.fn(),
+  setOutput: jest.fn(),
+  setFailed: jest.fn(),
+}));
 
-const core = require("@actions/core");
-jest.mock("@actions/core");
+const core = await import("@actions/core");
+// The module being tested should be imported dynamically. This ensures that the
+// mocks are used in place of any actual dependencies.
+const { calculateTags, calculateTagsFromList, testExports } =
+  await import("../src/index.js");
 
 let mockAgent;
 let tagInterceptor;
@@ -26,7 +33,7 @@ beforeEach(() => {
 afterEach(() => {
   mockAgent.assertNoPendingInterceptors();
   mockAgent.close();
-  jest.restoreAllMocks();
+  jest.resetAllMocks();
 });
 
 test("No other tags", async () => {
@@ -574,8 +581,6 @@ describe("main", () => {
   it("run with provided tags existing", async () => {
     core.debug.mockImplementation(console.debug);
     core.info.mockImplementation(console.debug);
-    const setOutput = jest.spyOn(core, "setOutput");
-    const setFailed = jest.spyOn(core, "setFailed");
 
     core.getInput.mockImplementation((a) => {
       return { ...mockInputs, existingTags: '["asd", "2.0.0-0"]' }[a];
@@ -583,13 +588,16 @@ describe("main", () => {
 
     await testExports.run();
 
-    console.log(setFailed.mock.calls);
-    expect(setFailed).toHaveBeenCalledTimes(0);
-    expect(setOutput).toHaveBeenCalledTimes(3);
+    console.log(core.setFailed.mock.calls);
+    expect(core.setFailed).toHaveBeenCalledTimes(0);
+    expect(core.setOutput).toHaveBeenCalledTimes(3);
 
-    expect(setOutput.mock.calls[0]).toEqual(["tags", ["1.2.3", "1.2", "1"]]);
-    expect(setOutput.mock.calls[1]).toEqual(["newTag", "1.2.3"]);
-    expect(setOutput.mock.calls[2]).toEqual([
+    expect(core.setOutput.mock.calls[0]).toEqual([
+      "tags",
+      ["1.2.3", "1.2", "1"],
+    ]);
+    expect(core.setOutput.mock.calls[1]).toEqual(["newTag", "1.2.3"]);
+    expect(core.setOutput.mock.calls[2]).toEqual([
       "existingTags",
       ["asd", "2.0.0-0"],
     ]);
@@ -598,8 +606,6 @@ describe("main", () => {
   it("run with provided tags empty", async () => {
     core.debug.mockImplementation(console.debug);
     core.info.mockImplementation(console.debug);
-    const setOutput = jest.spyOn(core, "setOutput");
-    const setFailed = jest.spyOn(core, "setFailed");
 
     core.getInput.mockImplementation((a) => {
       return mockInputs[a];
@@ -607,14 +613,14 @@ describe("main", () => {
 
     await testExports.run();
 
-    expect(setFailed).toHaveBeenCalledTimes(0);
-    expect(setOutput).toHaveBeenCalledTimes(3);
+    expect(core.setFailed).toHaveBeenCalledTimes(0);
+    expect(core.setOutput).toHaveBeenCalledTimes(3);
 
-    expect(setOutput.mock.calls[0]).toEqual([
+    expect(core.setOutput.mock.calls[0]).toEqual([
       "tags",
       ["1.2.3", "1.2", "1", "latest"],
     ]);
-    expect(setOutput.mock.calls[1]).toEqual(["newTag", "1.2.3"]);
-    expect(setOutput.mock.calls[2]).toEqual(["existingTags", []]);
+    expect(core.setOutput.mock.calls[1]).toEqual(["newTag", "1.2.3"]);
+    expect(core.setOutput.mock.calls[2]).toEqual(["existingTags", []]);
   });
 });
