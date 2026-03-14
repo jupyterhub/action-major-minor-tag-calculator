@@ -15,14 +15,13 @@ updates:
     directory: /
     schedule:
       interval: monthly
-      time: "05:00"
-      timezone: Etc/UTC
-    allow:
-      - dependency-type: production
-      - dependency-type: development
     groups:
-      all-dependencies:
+      # Group minor and patch updates, open separate PRs for major updates
+      npm-minor-and-patch:
         patterns: ["*"]
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - maintenance
       - dependencies
@@ -33,5 +32,3 @@ updates:
     labels: [ci]
     schedule:
       interval: monthly
-      time: "05:00"
-      timezone: Etc/UTC
