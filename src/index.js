@@ -1,9 +1,8 @@
 // https://docs.github.com/en/actions/creating-actions/creating-a-javascript-action
-"use strict";
-
-const core = require("@actions/core");
-const github = require("@actions/github");
-const semver = require("semver");
+import * as core from "@actions/core";
+import * as github from "@actions/github";
+import semver from "semver";
+import { fileURLToPath } from "node:url";
 
 function supportedPrerelease(pre) {
   // Supported prereleases are either empty or digits only.
@@ -282,11 +281,11 @@ async function run() {
 }
 
 // Don't run when imported as module
-if (!module.parent) {
+// https://stackoverflow.com/questions/59638994/how-to-check-if-node-esmodule-was-imported-or-ran-directly/71884874#71884874
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   run();
 }
 
-exports.calculateTags = calculateTags;
-exports.calculateTagsFromList = calculateTagsFromList;
+export { calculateTags, calculateTagsFromList };
 // run is exported so it can be tested
-exports.testExports = { run };
+export const testExports = { run };
