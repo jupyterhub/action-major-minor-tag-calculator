@@ -1,6 +1,6 @@
 ## v4
 
-### v4.0.0 - 2026-03-??
+### v4.0.0 - 2026-03-29
 
 ([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v3.4.0...v4.0.0))
 
