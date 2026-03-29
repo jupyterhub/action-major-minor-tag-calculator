@@ -1,3 +1,28 @@
+## v4
+
+### v4.0.0 - 2026-03-??
+
+([full changelog](https://github.com/jupyterhub/action-major-minor-tag-calculator/compare/v3.4.0...v4.0.0))
+
+#### Breaking Changes
+
+- Use node24 [#401](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/401) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio))
+- Switch to ESM modules [#400](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/400) ([@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio))
+
+#### Continuous integration improvements
+
+- dependabot: monthly at any time, separate major npm updates [#395](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/395) ([@manics](https://github.com/manics))
+- GH actions: ubuntu-24.04 [#371](https://github.com/jupyterhub/action-major-minor-tag-calculator/pull/371) ([@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/action-major-minor-tag-calculator/graphs/contributors?from=2025-04-09&to=2026-03-29&type=c))
+
+@consideRatio ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3AconsideRatio+updated%3A2025-04-09..2026-03-29&type=Issues)) | @manics ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Amanics+updated%3A2025-04-09..2026-03-29&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Ajupyterhub%2Faction-major-minor-tag-calculator+involves%3Aminrk+updated%3A2025-04-09..2026-03-29&type=Issues))
+
 ## v3
 
 ### v3.4.0 - 2025-04-09
