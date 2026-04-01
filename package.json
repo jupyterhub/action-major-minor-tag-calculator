@@ -27,12 +27,12 @@
     "@rollup/plugin-commonjs": "^29.0.2",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.0.3",
-    "eslint-plugin-jest": "^29.15.0",
+    "eslint": "^10.1.0",
+    "eslint-plugin-jest": "^29.15.1",
     "globals": "^17.4.0",
     "jest": "^30.3.0",
     "prettier": "^3.8.1",
-    "rollup": "^4.59.0",
-    "undici": "^7.24.3"
+    "rollup": "^4.60.1",
+    "undici": "^7.24.7"
   }
 }
