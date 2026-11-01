@@ -8,14 +8,14 @@ on:
 
 jobs:
   test-and-update:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "24"
       # Runs format, updates dist, runs tests
       - run: |
           npm run all
